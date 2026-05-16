@@ -1,8 +1,12 @@
 # inference-readiness-kit
 
+![inference-readiness-kit](docs/thumbnail.png)
+
 Automated go/no-go decisions for LLM inference deployments.
 
 Like readiness probes for Kubernetes, but for LLM inference SLAs. Combines external acceptance testing ([llmprobe](https://github.com/Jwrede/llmprobe)) with internal server telemetry (Prometheus) to make deployment decisions.
+
+![demo](demo/demo.gif)
 
 ## The problem
 
