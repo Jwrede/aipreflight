@@ -1,0 +1,32 @@
+endpoint: http://localhost:9090
+
+queries:
+  ttft:
+    expr: histogram_quantile(0.95, rate(vllm:time_to_first_token_seconds_bucket[1m]))
+    unit: seconds
+    description: Server-reported TTFT p95
+
+  e2e_latency:
+    expr: histogram_quantile(0.95, rate(vllm:e2e_request_latency_seconds_bucket[1m]))
+    unit: seconds
+    description: Server-reported end-to-end latency p95
+
+  queue_depth:
+    expr: vllm:num_requests_waiting
+    unit: count
+    description: Requests waiting in queue
+
+  running_requests:
+    expr: vllm:num_requests_running
+    unit: count
+    description: Requests currently being processed
+
+  kv_cache_usage:
+    expr: vllm:gpu_cache_usage_perc
+    unit: percent
+    description: KV cache utilization
+
+  throughput:
+    expr: rate(vllm:generation_tokens_total[1m])
+    unit: tokens/sec
+    description: Token generation rate

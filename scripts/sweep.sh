@@ -28,11 +28,11 @@ for level in "${CONCURRENCY_LEVELS[@]}"; do
         -c "$CONFIG" \
         > "$OUTDIR/llmprobe.jsonl"
 
-    python3 scripts/generate_report.py "$OUTDIR/llmprobe.jsonl" > "$OUTDIR/readiness-report.md"
+    python3 scripts/report.py "$OUTDIR/llmprobe.jsonl" > "$OUTDIR/readiness-report.md"
     echo "  Done. $(wc -l < "$OUTDIR/llmprobe.jsonl") probes collected."
     echo ""
 done
 
 echo "Generating comparison..."
-python3 scripts/compare_sweep.py "$SWEEP_DIR" > "$SWEEP_DIR/comparison.md"
+python3 scripts/compare.py "$SWEEP_DIR" > "$SWEEP_DIR/comparison.md"
 echo "Sweep complete. See $SWEEP_DIR/comparison.md"

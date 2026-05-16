@@ -1,0 +1,9 @@
+sla:
+  ttft_ms: 500
+  latency_ms: 10000
+  min_throughput: 3.0
+  max_error_rate: 0.01
+
+gate:
+  min_probes: 5
+  pass_rate: 0.95

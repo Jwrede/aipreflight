@@ -3,3 +3,6 @@ runs/
 *.pyc
 __pycache__/
 .venv/
+
+todo.md
+NEW_STORY.md
