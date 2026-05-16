@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import json
+import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,16 +38,17 @@ def load_queries(path: str = "configs/prometheus/queries.yml") -> dict:
 
 def query_prometheus(endpoint: str, expr: str, start: str, end: str) -> list[dict]:
     """Query Prometheus range API."""
-    url = (
-        f"{endpoint}/api/v1/query_range?"
-        f"query={quote(expr)}&start={start}&end={end}&step=15s"
-    )
+    params = f"query={quote(expr)}&start={start}&end={end}&step=15s"
+    url = f"{endpoint}/api/v1/query_range?{params}"
     try:
         req = Request(url)
         with urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())
             if data.get("status") == "success":
                 return data.get("data", {}).get("result", [])
+            err = data.get("error", "")
+            if err:
+                print(f"  Warning: Prometheus error for {expr[:40]}: {err}", file=sys.stderr)
     except (URLError, json.JSONDecodeError) as e:
         print(f"  Warning: Prometheus query failed: {e}", file=sys.stderr)
     return []
@@ -69,7 +71,9 @@ def collect_server_metrics(endpoint: str, probes: list[dict], queries: dict) -> 
             for series in results:
                 for ts, val in series.get("values", []):
                     try:
-                        values.append(float(val))
+                        v = float(val)
+                        if not math.isnan(v) and not math.isinf(v):
+                            values.append(v)
                     except (ValueError, TypeError):
                         pass
             if values:
@@ -143,17 +147,17 @@ def diagnose(probes: list[dict], server_metrics: dict | None = None) -> str:
         server_ttft = server_metrics.get("ttft")
         if server_ttft and ttfts:
             server_ttft_ms = server_ttft["mean"] * 1000
-            client_ttft_ms = percentile(ttfts, 50)
+            client_ttft_ms = percentile(ttfts, 95)
             gap = client_ttft_ms - server_ttft_ms
             if gap > 100:
                 lines.append(
-                    f"- **Network/proxy overhead detected**: Client TTFT ({format_ms(client_ttft_ms)}) "
-                    f"exceeds server TTFT ({format_ms(server_ttft_ms)}) by {format_ms(gap)}. "
+                    f"- **Network/proxy overhead detected**: Client TTFT p95 ({format_ms(client_ttft_ms)}) "
+                    f"exceeds server TTFT p95 ({format_ms(server_ttft_ms)}) by {format_ms(gap)}. "
                     "Check load balancer, TLS termination, or DNS resolution."
                 )
             else:
                 lines.append(
-                    f"- Client and server TTFT align (gap: {format_ms(abs(gap))}). "
+                    f"- Client and server TTFT p95 align (gap: {format_ms(abs(gap))}). "
                     "No significant network overhead."
                 )
 
@@ -172,7 +176,7 @@ def diagnose(probes: list[dict], server_metrics: dict | None = None) -> str:
             )
 
         if not any([
-            server_ttft and ttfts and (percentile(ttfts, 50) - server_ttft["mean"] * 1000) > 100,
+            server_ttft and ttfts and (percentile(ttfts, 95) - server_ttft["mean"] * 1000) > 100,
             queue and queue["max"] > 5,
             kv and kv["max"] > 0.8,
         ]):

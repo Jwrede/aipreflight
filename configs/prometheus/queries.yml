@@ -2,31 +2,31 @@ endpoint: http://localhost:9090
 
 queries:
   ttft:
-    expr: histogram_quantile(0.95, rate(vllm:time_to_first_token_seconds_bucket[1m]))
+    expr: histogram_quantile(0.95, sum(rate(vllm:time_to_first_token_seconds_bucket[5m])) by (le))
     unit: seconds
     description: Server-reported TTFT p95
 
   e2e_latency:
-    expr: histogram_quantile(0.95, rate(vllm:e2e_request_latency_seconds_bucket[1m]))
+    expr: histogram_quantile(0.95, sum(rate(vllm:e2e_request_latency_seconds_bucket[5m])) by (le))
     unit: seconds
     description: Server-reported end-to-end latency p95
 
   queue_depth:
-    expr: vllm:num_requests_waiting
+    expr: max_over_time(vllm:num_requests_waiting[1m])
     unit: count
     description: Requests waiting in queue
 
   running_requests:
-    expr: vllm:num_requests_running
+    expr: max_over_time(vllm:num_requests_running[1m])
     unit: count
     description: Requests currently being processed
 
   kv_cache_usage:
-    expr: vllm:kv_cache_usage_perc
+    expr: max_over_time(vllm:kv_cache_usage_perc[1m])
     unit: percent
     description: KV cache utilization
 
   queue_time:
-    expr: histogram_quantile(0.95, rate(vllm:request_queue_time_seconds_bucket[1m]))
+    expr: histogram_quantile(0.95, sum(rate(vllm:request_queue_time_seconds_bucket[5m])) by (le))
     unit: seconds
     description: Time spent waiting in queue p95

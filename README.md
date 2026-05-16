@@ -111,6 +111,7 @@ Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cr
 - [Readiness report (SLA violation at c16)](reports/examples/vllm-cpu-c16-readiness-report.md)
 - [Concurrency sweep (vLLM)](reports/examples/vllm-cpu-concurrency-sweep.md)
 - [Cross-engine comparison](reports/examples/cross-engine-comparison.md)
+- [Prometheus diagnosis (c16 under load)](reports/examples/prometheus-diagnosis-c16.md)
 
 ## Project structure
 
@@ -137,7 +138,7 @@ reports/examples/                # Example outputs
 - [x] Concurrency sweep with comparison
 - [x] Real vLLM CPU experiment with published results
 - [x] Cross-engine comparison (vLLM vs Ollama)
-- [ ] Prometheus-based server-side correlation with live data
+- [x] Prometheus-based server-side correlation with live data
 - [ ] Runbooks for common failure modes
 
 ## License
