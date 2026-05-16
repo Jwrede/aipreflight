@@ -157,7 +157,10 @@ scripts/
   compare.py                     # Sweep comparison table
   report.py                      # Full readiness report with verdict
 fixtures/                        # Test data
+tests/                           # pytest suite
+runbooks/                        # Failure mode runbooks
 reports/examples/                # Example outputs
+.github/workflows/ci.yml        # CI (pytest + shellcheck)
 ```
 
 ## Roadmap
@@ -168,7 +171,7 @@ reports/examples/                # Example outputs
 - [x] Real vLLM CPU experiment with published results
 - [x] Cross-engine comparison (vLLM vs Ollama)
 - [x] Prometheus-based server-side correlation with live data
-- [ ] Runbooks for common failure modes
+- [x] Runbooks for common failure modes
 
 ## License
 
