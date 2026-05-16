@@ -1,0 +1,10 @@
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"healthy","ttft_ms":245,"latency_ms":3200,"tokens_per_sec":4.8,"timestamp":"2026-05-16T10:00:00Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"healthy","ttft_ms":312,"latency_ms":3450,"tokens_per_sec":4.5,"timestamp":"2026-05-16T10:00:10Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"healthy","ttft_ms":289,"latency_ms":3100,"tokens_per_sec":5.1,"timestamp":"2026-05-16T10:00:20Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"healthy","ttft_ms":267,"latency_ms":3350,"tokens_per_sec":4.6,"timestamp":"2026-05-16T10:00:30Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"degraded","ttft_ms":3150,"latency_ms":8900,"tokens_per_sec":2.1,"timestamp":"2026-05-16T10:00:40Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"degraded","ttft_ms":4200,"latency_ms":11200,"tokens_per_sec":1.8,"timestamp":"2026-05-16T10:00:50Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"healthy","ttft_ms":310,"latency_ms":3500,"tokens_per_sec":4.4,"timestamp":"2026-05-16T10:01:00Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"healthy","ttft_ms":278,"latency_ms":3250,"tokens_per_sec":4.7,"timestamp":"2026-05-16T10:01:10Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"error","error":"connection refused","timestamp":"2026-05-16T10:01:20Z"}
+{"provider":"vllm-local","model":"Qwen/Qwen2-0.5B-Instruct","status":"healthy","ttft_ms":295,"latency_ms":3400,"tokens_per_sec":4.5,"timestamp":"2026-05-16T10:01:30Z"}
