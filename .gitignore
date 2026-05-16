@@ -3,6 +3,7 @@ runs/
 *.pyc
 __pycache__/
 .venv/
+prometheus.yml
 
 todo.md
 NEW_STORY.md

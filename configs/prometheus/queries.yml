@@ -22,11 +22,11 @@ queries:
     description: Requests currently being processed
 
   kv_cache_usage:
-    expr: vllm:gpu_cache_usage_perc
+    expr: vllm:kv_cache_usage_perc
     unit: percent
     description: KV cache utilization
 
-  throughput:
-    expr: rate(vllm:generation_tokens_total[1m])
-    unit: tokens/sec
-    description: Token generation rate
+  queue_time:
+    expr: histogram_quantile(0.95, rate(vllm:request_queue_time_seconds_bucket[1m]))
+    unit: seconds
+    description: Time spent waiting in queue p95

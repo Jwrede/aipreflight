@@ -52,19 +52,24 @@ Produces a comparison table showing how TTFT, latency, and throughput degrade un
 
 ## Quick start
 
-Prerequisites: [llmprobe](https://github.com/Jwrede/llmprobe) (`go install github.com/Jwrede/llmprobe@latest`), Python 3.10+, PyYAML.
+Prerequisites: [llmprobe](https://github.com/Jwrede/llmprobe) v1.4.0+, Python 3.10+.
 
 ```bash
+go install github.com/Jwrede/llmprobe@latest
 pip install pyyaml
+git clone https://github.com/Jwrede/inference-readiness-kit && cd inference-readiness-kit
 
-# Edit thresholds to match your SLA
-vim thresholds.yml
-
-# Edit the probe config to point at your endpoint
+# Point at your endpoint (vLLM, Ollama, or any OpenAI-compatible server)
 vim configs/llmprobe/vllm.yml
 
-# Run the gate check
-./scripts/gate.sh
+# Run the readiness gate (exit 0 = pass, exit 1 = fail)
+./scripts/gate.sh configs/llmprobe/vllm.yml thresholds.yml 30s 5s
+
+# Find the concurrency breaking point
+./scripts/sweep.sh configs/llmprobe/vllm.yml 1,2,4,8,16
+
+# Diagnose with server-side metrics (requires Prometheus scraping your endpoint)
+python3 scripts/diagnose.py runs/latest/llmprobe.jsonl --prometheus http://localhost:9090
 ```
 
 ## Configuration
