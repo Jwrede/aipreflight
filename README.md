@@ -85,16 +85,35 @@ gate:
 
 **configs/prometheus/queries.yml** defines which server metrics to collect for diagnosis.
 
-## Output example
+## Real experiment results
 
-See [reports/examples/sample-readiness-report.md](reports/examples/sample-readiness-report.md) for a full report from a simulated vLLM session with degradation.
+Concurrency sweep on Qwen2 0.5B, 8 vCPUs, 16GB RAM, no GPU:
+
+| Concurrency | vLLM TTFT p50 | Ollama TTFT p50 | vLLM tok/s | Ollama tok/s |
+|-------------|---------------|-----------------|------------|--------------|
+| 1 | 110ms | 204ms | 16.4 | 42.3 |
+| 4 | 225ms | 750ms | 17.5 | 59.3 |
+| 8 | 327ms | 2.50s | 15.4 | 51.8 |
+| 16 | 591ms | 6.90s | 10.7 | 53.1 |
+
+Ollama wins on raw throughput (Q4 quantization + llama.cpp). vLLM wins on TTFT stability under load (continuous batching). For a 500ms TTFT SLA: vLLM supports 8 concurrent users, Ollama supports 1.
+
+Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cross-engine-comparison.md)
+
+## Example outputs
+
+- [Readiness report (healthy)](reports/examples/sample-readiness-report.md)
+- [Readiness report (SLA violation at c16)](reports/examples/vllm-cpu-c16-readiness-report.md)
+- [Concurrency sweep (vLLM)](reports/examples/vllm-cpu-concurrency-sweep.md)
+- [Cross-engine comparison](reports/examples/cross-engine-comparison.md)
 
 ## Project structure
 
 ```
 thresholds.yml                    # SLA contract
 configs/
-  llmprobe/vllm.yml              # Probe configuration
+  llmprobe/vllm.yml              # vLLM probe configuration
+  llmprobe/ollama.yml            # Ollama probe configuration
   prometheus/queries.yml          # Server-side metric queries
 scripts/
   gate.sh                        # CI/CD readiness gate (exit 0/1)
@@ -111,7 +130,9 @@ reports/examples/                # Example outputs
 - [x] Readiness gate with SLA thresholds
 - [x] Diagnosis framework (client-only and with Prometheus)
 - [x] Concurrency sweep with comparison
-- [ ] Real vLLM CPU experiment with published results
+- [x] Real vLLM CPU experiment with published results
+- [x] Cross-engine comparison (vLLM vs Ollama)
+- [ ] Prometheus-based server-side correlation with live data
 - [ ] Runbooks for common failure modes
 
 ## License
