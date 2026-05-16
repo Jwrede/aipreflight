@@ -134,6 +134,8 @@ open http://localhost:3001/d/vllm-readiness
 # Login: admin / admin (or anonymous access enabled by default)
 ```
 
+![Grafana dashboard under concurrency ramp](docs/grafana-dashboard.png)
+
 Panels: TTFT p95/p50, end-to-end latency, running/waiting requests, KV cache usage, queue wait time, token throughput. Color thresholds match the SLA defaults in `thresholds.yml`.
 
 To stop:
