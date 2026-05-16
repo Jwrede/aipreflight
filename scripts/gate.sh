@@ -38,6 +38,8 @@ llmprobe watch \
     -c "$CONFIG" \
     > "$OUTDIR/llmprobe.jsonl" 2>/dev/null
 
+ln -sfn "$(basename "$OUTDIR")" runs/latest
+
 PROBES=$(wc -l < "$OUTDIR/llmprobe.jsonl")
 echo "Collected $PROBES probes."
 echo ""

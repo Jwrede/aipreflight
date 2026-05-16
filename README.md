@@ -6,7 +6,7 @@ Like readiness probes for Kubernetes, but for LLM inference SLAs. Combines exter
 
 ## The problem
 
-Server metrics say "healthy" while users experience 3-second TTFT. The load balancer is misconfigured, TLS adds overhead, the rate limiter is throttling, or the model is silently returning empty responses. Server-side metrics cannot detect any of this. You need an external validator.
+Server metrics say "healthy" while users experience 3-second TTFT. The load balancer is misconfigured, TLS adds overhead, the rate limiter is throttling, or the model is silently returning empty responses. Server-side metrics alone often miss this because they do not measure the full client path. You need an external validator.
 
 ## How it works
 
@@ -90,6 +90,34 @@ gate:
 
 **configs/prometheus/queries.yml** defines which server metrics to collect for diagnosis.
 
+## Running Prometheus with vLLM
+
+vLLM exposes a `/metrics` endpoint by default. To correlate client probes with server telemetry:
+
+```bash
+# 1. Start vLLM (Docker CPU example)
+docker run -d --name vllm -p 8000:8000 \
+  vllm/vllm-openai-cpu:latest \
+  --model Qwen/Qwen2-0.5B-Instruct --max-model-len 512
+
+# 2. Start Prometheus
+cp prometheus.example.yml prometheus.yml
+# Edit prometheus.yml target if vLLM is not on host.docker.internal:8000
+docker run -d --name prometheus -p 9090:9090 \
+  --add-host=host.docker.internal:host-gateway \
+  -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml:ro \
+  prom/prometheus:latest
+
+# 3. Verify scraping works
+curl -s http://localhost:9090/api/v1/targets | grep '"health":"up"'
+
+# 4. Run probes and diagnose
+./scripts/gate.sh configs/llmprobe/vllm.yml thresholds.yml 30s 5s
+python3 scripts/diagnose.py runs/latest/llmprobe.jsonl --prometheus http://localhost:9090
+```
+
+The diagnosis correlates client-observed TTFT with server-reported TTFT. A large gap (>100ms) indicates network or proxy overhead between the client and the inference engine.
+
 ## Real experiment results
 
 Concurrency sweep on Qwen2 0.5B, 8 vCPUs, 16GB RAM, no GPU:
@@ -117,6 +145,7 @@ Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cr
 
 ```
 thresholds.yml                    # SLA contract
+prometheus.example.yml            # Prometheus config template
 configs/
   llmprobe/vllm.yml              # vLLM probe configuration
   llmprobe/ollama.yml            # Ollama probe configuration

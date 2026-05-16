@@ -53,6 +53,8 @@ for level in "${CONCURRENCY_LEVELS[@]}"; do
     printf "%3d probes collected\n" "$PROBES"
 done
 
+ln -sfn "$(basename "$SWEEP_DIR")" runs/latest
+
 echo ""
 python3 scripts/compare.py "$SWEEP_DIR" | tee "$SWEEP_DIR/comparison.md"
 echo ""
