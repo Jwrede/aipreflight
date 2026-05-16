@@ -118,6 +118,30 @@ python3 scripts/diagnose.py runs/latest/llmprobe.jsonl --prometheus http://local
 
 The diagnosis correlates client-observed TTFT with server-reported TTFT. A large gap (>100ms) indicates network or proxy overhead between the client and the inference engine.
 
+## Grafana Dashboard
+
+A pre-built dashboard visualizes the same metrics used by `scripts/diagnose.py`. Grafana is for inspection; the readiness gate remains the source of deployment decisions.
+
+```bash
+# 1. Make sure prometheus.yml exists
+cp prometheus.example.yml prometheus.yml
+
+# 2. Start Prometheus + Grafana (Grafana on port 3001)
+docker compose -f docker-compose.observability.yml up -d
+
+# 3. Open in browser
+open http://localhost:3001/d/vllm-readiness
+# Login: admin / admin (or anonymous access enabled by default)
+```
+
+Panels: TTFT p95/p50, end-to-end latency, running/waiting requests, KV cache usage, queue wait time, token throughput. Color thresholds match the SLA defaults in `thresholds.yml`.
+
+To stop:
+
+```bash
+docker compose -f docker-compose.observability.yml down
+```
+
 ## Real experiment results
 
 Concurrency sweep on Qwen2 0.5B, 8 vCPUs, 16GB RAM, no GPU:
@@ -146,6 +170,10 @@ Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cr
 ```
 thresholds.yml                    # SLA contract
 prometheus.example.yml            # Prometheus config template
+docker-compose.observability.yml  # Prometheus + Grafana stack
+grafana/
+  dashboard.json                  # Pre-built vLLM dashboard
+  provisioning/                   # Auto-config for datasource + dashboard
 configs/
   llmprobe/vllm.yml              # vLLM probe configuration
   llmprobe/ollama.yml            # Ollama probe configuration
