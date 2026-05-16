@@ -49,11 +49,11 @@ python3 scripts/report.py --gate --thresholds "$THRESHOLDS" "$OUTDIR/llmprobe.js
 EXIT_CODE=${PIPESTATUS[0]}
 
 echo ""
-if [ $EXIT_CODE -eq 0 ]; then
+if [ "$EXIT_CODE" -eq 0 ]; then
     echo "GATE: PASS"
 else
     echo "GATE: FAIL"
     echo "Diagnose: python3 scripts/diagnose.py $OUTDIR/llmprobe.jsonl --prometheus http://localhost:9090"
 fi
 
-exit $EXIT_CODE
+exit "$EXIT_CODE"

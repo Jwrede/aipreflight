@@ -38,7 +38,7 @@ for level in "${CONCURRENCY_LEVELS[@]}"; do
     OUTDIR="$SWEEP_DIR/c${level}"
     mkdir -p "$OUTDIR"
 
-    for i in $(seq 1 "$level"); do
+    for _i in $(seq 1 "$level"); do
         llmprobe watch \
             --interval "$INTERVAL" \
             --count "$COUNT" \
