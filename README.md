@@ -1,6 +1,6 @@
-# inference-readiness-kit
-
 ![inference-readiness-kit](docs/thumbnail.png)
+
+# inference-readiness-kit
 
 Automated go/no-go decisions for LLM inference deployments.
 
