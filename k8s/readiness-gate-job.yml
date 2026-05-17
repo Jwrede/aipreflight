@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inference-readiness-gate
+  labels:
+    app: inference-readiness-kit
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: inference-readiness-kit
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: gate
+          image: golang:1.22-bookworm
+          command:
+            - /bin/bash
+            - -c
+            - |
+              go install github.com/Jwrede/llmprobe@latest
+              pip install pyyaml
+              git clone https://github.com/Jwrede/inference-readiness-kit /work
+              cd /work
+              ./scripts/gate.sh configs/llmprobe/vllm.yml thresholds.yml 30s 5s
+          env:
+            - name: VLLM_ENDPOINT
+              value: "http://vllm:8000"

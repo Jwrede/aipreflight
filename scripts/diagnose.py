@@ -175,10 +175,34 @@ def diagnose(probes: list[dict], server_metrics: dict | None = None) -> str:
                 "Long sequences may be evicted, causing recomputation and TTFT spikes."
             )
 
+        gpu_util = server_metrics.get("gpu_utilization")
+        gpu_mem = server_metrics.get("gpu_memory_used")
+        gpu_temp = server_metrics.get("gpu_temperature")
+
+        if gpu_util or gpu_mem or gpu_temp:
+            lines.append("")
+            lines.append("## GPU Metrics")
+            lines.append("")
+            if gpu_util:
+                lines.append(f"- GPU utilization: avg {gpu_util['mean']:.1f}%, peak {gpu_util['max']:.1f}%")
+                if gpu_util["max"] > 95:
+                    lines.append("  **GPU saturated**: Compute-bound. Scale to more GPUs or reduce batch size.")
+            if gpu_mem:
+                lines.append(f"- GPU memory: avg {gpu_mem['mean']:.1f}%, peak {gpu_mem['max']:.1f}%")
+                if gpu_mem["max"] > 90:
+                    lines.append("  **GPU memory pressure**: Risk of OOM. Reduce max_model_len or batch size.")
+            if gpu_temp:
+                lines.append(f"- GPU temperature: max {gpu_temp['max']:.0f}C")
+                if gpu_temp["max"] > 85:
+                    lines.append("  **Thermal throttling risk**: GPU may downclock. Check cooling.")
+            lines.append("")
+
         if not any([
             server_ttft and ttfts and (percentile(ttfts, 95) - server_ttft["mean"] * 1000) > 100,
             queue and queue["max"] > 5,
             kv and kv["max"] > 0.8,
+            gpu_util and gpu_util["max"] > 95,
+            gpu_mem and gpu_mem["max"] > 90,
         ]):
             lines.append("- No significant issues detected in server metrics.")
 

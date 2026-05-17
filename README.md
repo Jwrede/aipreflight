@@ -140,13 +140,35 @@ open http://localhost:3001/d/vllm-readiness
 
 ![Grafana dashboard under concurrency ramp](docs/grafana-dashboard.png)
 
-Panels: TTFT p95/p50, end-to-end latency, running/waiting requests, KV cache usage, queue wait time, token throughput. Color thresholds match the SLA defaults in `thresholds.yml`.
+Panels: TTFT p95/p50, end-to-end latency, running/waiting requests, KV cache usage, GPU utilization, GPU memory, GPU temperature/power, queue wait time, token throughput. Color thresholds match the SLA defaults in `thresholds.yml`.
 
 To stop:
 
 ```bash
 docker compose -f docker-compose.observability.yml down
 ```
+
+## Kubernetes Deployment
+
+Deploy vLLM with GPU scheduling and use inference-readiness-kit as the readiness probe:
+
+```bash
+# Deploy vLLM with GPU and readiness probes
+kubectl apply -f k8s/vllm-deployment.yml
+kubectl apply -f k8s/vllm-service.yml
+
+# Deploy DCGM exporter for GPU metrics (requires NVIDIA GPU Operator)
+kubectl apply -f k8s/dcgm-exporter.yml
+kubectl apply -f k8s/servicemonitor.yml
+
+# Run readiness gate as a Job (post-deploy validation)
+kubectl apply -f k8s/readiness-gate-job.yml
+kubectl logs -f job/inference-readiness-gate
+```
+
+The Deployment uses `nvidia.com/gpu` resource requests, a `/health` readiness probe for basic liveness, and the readiness gate Job for SLA validation after deployment. DCGM exporter feeds GPU utilization, memory, and temperature into Prometheus alongside vLLM inference metrics.
+
+See [docs/runpod-gpu-setup.md](docs/runpod-gpu-setup.md) for reproducing GPU benchmarks on RunPod.
 
 ## Real experiment results
 
@@ -184,25 +206,34 @@ Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cr
 ```
 thresholds.yml                    # SLA contract
 prometheus.example.yml            # Prometheus config template
-docker-compose.observability.yml  # Prometheus + Grafana stack
+docker-compose.observability.yml  # Prometheus + Grafana + DCGM stack
+k8s/
+  vllm-deployment.yml            # vLLM with GPU scheduling + readiness probe
+  vllm-service.yml               # ClusterIP service
+  readiness-gate-job.yml         # Post-deploy SLA validation Job
+  dcgm-exporter.yml              # NVIDIA DCGM GPU metrics DaemonSet
+  servicemonitor.yml             # Prometheus ServiceMonitors
 grafana/
-  dashboard.json                  # Pre-built vLLM dashboard
-  provisioning/                   # Auto-config for datasource + dashboard
+  dashboard.json                 # vLLM + GPU metrics dashboard
+  provisioning/                  # Auto-config for datasource + dashboard
 configs/
-  llmprobe/vllm.yml              # vLLM probe configuration
-  llmprobe/ollama.yml            # Ollama probe configuration
-  prometheus/queries.yml          # Server-side metric queries
+  llmprobe/vllm.yml             # vLLM probe configuration
+  llmprobe/ollama.yml           # Ollama probe configuration
+  llmprobe/runpod-gpu.yml       # RunPod GPU probe template
+  prometheus/queries.yml         # Server + GPU metric queries
 scripts/
-  gate.sh                        # CI/CD readiness gate (exit 0/1)
-  diagnose.py                    # Client + server correlation
-  sweep.sh                       # Concurrency sweep
-  compare.py                     # Sweep comparison table
-  report.py                      # Full readiness report with verdict
-fixtures/                        # Test data
-tests/                           # pytest suite
-runbooks/                        # Failure mode runbooks
-reports/examples/                # Example outputs
-.github/workflows/ci.yml        # CI (pytest + shellcheck)
+  gate.sh                       # CI/CD readiness gate (exit 0/1)
+  diagnose.py                   # Client + server + GPU correlation
+  sweep.sh                      # Concurrency sweep
+  compare.py                    # Sweep comparison table
+  report.py                     # Full readiness report with verdict
+docs/
+  runpod-gpu-setup.md           # GPU benchmark reproducibility guide
+fixtures/                       # Test data
+tests/                          # pytest suite
+runbooks/                       # Failure mode runbooks
+reports/examples/               # Example outputs
+.github/workflows/ci.yml       # CI (pytest + shellcheck)
 ```
 
 ## Roadmap
@@ -214,6 +245,8 @@ reports/examples/                # Example outputs
 - [x] Cross-engine comparison (vLLM vs Ollama)
 - [x] Prometheus-based server-side correlation with live data
 - [x] Runbooks for common failure modes
+- [x] Kubernetes manifests with GPU scheduling
+- [x] NVIDIA DCGM GPU metrics in Prometheus/Grafana
 
 ## License
 

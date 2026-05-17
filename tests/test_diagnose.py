@@ -87,6 +87,64 @@ class TestDiagnoseWithServerMetrics:
         assert "KV cache pressure" in report
 
 
+class TestDiagnoseGPUMetrics:
+    def test_gpu_saturation_flagged(self):
+        probes = [make_probe(ttft_ms=500) for _ in range(10)]
+        server_metrics = {
+            "ttft": {"mean": 0.45, "max": 0.5, "unit": "seconds", "description": "Server TTFT p95"},
+            "queue_depth": {"mean": 0, "max": 1, "unit": "count", "description": "Queue"},
+            "kv_cache_usage": {"mean": 0.3, "max": 0.4, "unit": "percent", "description": "KV"},
+            "gpu_utilization": {"mean": 92.0, "max": 98.0, "unit": "percent", "description": "GPU util"},
+            "gpu_memory_used": {"mean": 60.0, "max": 70.0, "unit": "percent", "description": "GPU mem"},
+            "gpu_temperature": {"mean": 72.0, "max": 78.0, "unit": "celsius", "description": "GPU temp"},
+        }
+        report = diagnose(probes, server_metrics=server_metrics)
+        assert "GPU saturated" in report
+        assert "GPU Metrics" in report
+
+    def test_gpu_memory_pressure_flagged(self):
+        probes = [make_probe(ttft_ms=500) for _ in range(10)]
+        server_metrics = {
+            "ttft": {"mean": 0.45, "max": 0.5, "unit": "seconds", "description": "Server TTFT p95"},
+            "queue_depth": {"mean": 0, "max": 1, "unit": "count", "description": "Queue"},
+            "kv_cache_usage": {"mean": 0.3, "max": 0.4, "unit": "percent", "description": "KV"},
+            "gpu_utilization": {"mean": 60.0, "max": 75.0, "unit": "percent", "description": "GPU util"},
+            "gpu_memory_used": {"mean": 88.0, "max": 95.0, "unit": "percent", "description": "GPU mem"},
+            "gpu_temperature": {"mean": 70.0, "max": 75.0, "unit": "celsius", "description": "GPU temp"},
+        }
+        report = diagnose(probes, server_metrics=server_metrics)
+        assert "GPU memory pressure" in report
+
+    def test_thermal_throttling_flagged(self):
+        probes = [make_probe(ttft_ms=300) for _ in range(10)]
+        server_metrics = {
+            "ttft": {"mean": 0.28, "max": 0.3, "unit": "seconds", "description": "Server TTFT p95"},
+            "queue_depth": {"mean": 0, "max": 1, "unit": "count", "description": "Queue"},
+            "kv_cache_usage": {"mean": 0.3, "max": 0.4, "unit": "percent", "description": "KV"},
+            "gpu_utilization": {"mean": 70.0, "max": 80.0, "unit": "percent", "description": "GPU util"},
+            "gpu_memory_used": {"mean": 50.0, "max": 60.0, "unit": "percent", "description": "GPU mem"},
+            "gpu_temperature": {"mean": 82.0, "max": 88.0, "unit": "celsius", "description": "GPU temp"},
+        }
+        report = diagnose(probes, server_metrics=server_metrics)
+        assert "Thermal throttling" in report
+
+    def test_gpu_healthy_no_warnings(self):
+        probes = [make_probe(ttft_ms=100) for _ in range(10)]
+        server_metrics = {
+            "ttft": {"mean": 0.09, "max": 0.1, "unit": "seconds", "description": "Server TTFT p95"},
+            "queue_depth": {"mean": 0, "max": 1, "unit": "count", "description": "Queue"},
+            "kv_cache_usage": {"mean": 0.3, "max": 0.4, "unit": "percent", "description": "KV"},
+            "gpu_utilization": {"mean": 45.0, "max": 60.0, "unit": "percent", "description": "GPU util"},
+            "gpu_memory_used": {"mean": 40.0, "max": 50.0, "unit": "percent", "description": "GPU mem"},
+            "gpu_temperature": {"mean": 55.0, "max": 62.0, "unit": "celsius", "description": "GPU temp"},
+        }
+        report = diagnose(probes, server_metrics=server_metrics)
+        assert "GPU Metrics" in report
+        assert "GPU saturated" not in report
+        assert "GPU memory pressure" not in report
+        assert "Thermal throttling" not in report
+
+
 class TestPercentileDiagnose:
     def test_empty(self):
         assert percentile([], 50) == 0.0

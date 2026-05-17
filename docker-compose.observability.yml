@@ -31,3 +31,17 @@ services:
     environment:
       - ENABLE_METRICS=true
       - AUTH_TOKEN=readiness-kit-token
+
+  # GPU metrics (requires NVIDIA GPU and nvidia-container-toolkit)
+  # Uncomment on GPU nodes:
+  # dcgm-exporter:
+  #   image: nvcr.io/nvidia/k8s/dcgm-exporter:3.3.5-3.4.1-ubuntu22.04
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+  #   ports:
+  #     - "9400:9400"

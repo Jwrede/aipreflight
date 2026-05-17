@@ -30,3 +30,29 @@ queries:
     expr: histogram_quantile(0.95, sum(rate(vllm:request_queue_time_seconds_bucket[5m])) by (le))
     unit: seconds
     description: Time spent waiting in queue p95
+
+  # GPU metrics (requires DCGM exporter or NVIDIA GPU Operator)
+  gpu_utilization:
+    expr: avg(DCGM_FI_DEV_GPU_UTIL)
+    unit: percent
+    description: GPU compute utilization
+
+  gpu_memory_used:
+    expr: avg(DCGM_FI_DEV_FB_USED) / avg(DCGM_FI_DEV_FB_FREE + DCGM_FI_DEV_FB_USED) * 100
+    unit: percent
+    description: GPU memory utilization
+
+  gpu_memory_used_bytes:
+    expr: avg(DCGM_FI_DEV_FB_USED) * 1024 * 1024
+    unit: bytes
+    description: GPU memory used (bytes)
+
+  gpu_temperature:
+    expr: max(DCGM_FI_DEV_GPU_TEMP)
+    unit: celsius
+    description: GPU temperature (max across devices)
+
+  gpu_power_usage:
+    expr: avg(DCGM_FI_DEV_POWER_USAGE)
+    unit: watts
+    description: GPU power draw
