@@ -218,6 +218,7 @@ grafana/
   provisioning/                  # Auto-config for datasource + dashboard
 configs/
   llmprobe/vllm.yml             # vLLM probe configuration
+  llmprobe/vllm-k8s.yml         # In-cluster vLLM probe configuration
   llmprobe/ollama.yml           # Ollama probe configuration
   llmprobe/runpod-gpu.yml       # RunPod GPU probe template
   prometheus/queries.yml         # Server + GPU metric queries

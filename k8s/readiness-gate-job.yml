@@ -19,11 +19,10 @@ spec:
             - /bin/bash
             - -c
             - |
+              apt-get update
+              apt-get install -y --no-install-recommends python3 python3-yaml git ca-certificates
+              rm -rf /var/lib/apt/lists/*
               go install github.com/Jwrede/llmprobe@latest
-              pip install pyyaml
               git clone https://github.com/Jwrede/inference-readiness-kit /work
               cd /work
-              ./scripts/gate.sh configs/llmprobe/vllm.yml thresholds.yml 30s 5s
-          env:
-            - name: VLLM_ENDPOINT
-              value: "http://vllm:8000"
+              ./scripts/gate.sh configs/llmprobe/vllm-k8s.yml thresholds.yml 30s 5s
