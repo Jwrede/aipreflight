@@ -1,0 +1,11 @@
+providers:
+  - name: openai
+    label: runpod-gpu
+    api_key: unused
+    base_url: https://<pod-id>-8000.proxy.runpod.net
+    models:
+      - name: Qwen/Qwen2-0.5B-Instruct
+        thresholds:
+          max_ttft: 3s
+          max_latency: 30s
+          min_throughput: 2

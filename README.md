@@ -150,26 +150,34 @@ docker compose -f docker-compose.observability.yml down
 
 ## Real experiment results
 
-Concurrency sweep on Qwen2 0.5B, 8 vCPUs, 16GB RAM, no GPU:
+Concurrency sweep on Qwen2 0.5B across GPU and CPU:
 
-| Concurrency | vLLM TTFT p50 | Ollama TTFT p50 | vLLM tok/s | Ollama tok/s |
-|-------------|---------------|-----------------|------------|--------------|
-| 1 | 110ms | 204ms | 16.4 | 42.3 |
-| 4 | 225ms | 750ms | 17.5 | 59.3 |
-| 8 | 327ms | 2.50s | 15.4 | 51.8 |
-| 16 | 591ms | 6.90s | 10.7 | 53.1 |
+| Concurrency | GPU TTFT p50 | GPU tok/s | CPU TTFT p50 | CPU tok/s | Ollama TTFT p50 | Ollama tok/s |
+|-------------|--------------|-----------|--------------|-----------|-----------------|--------------|
+| 1 | 77ms | 528 | 110ms | 16.4 | 204ms | 42.3 |
+| 4 | 73ms | 465 | 225ms | 17.5 | 750ms | 59.3 |
+| 8 | 76ms | 406 | 327ms | 15.4 | 2.50s | 51.8 |
+| 16 | 71ms | 380 | 591ms | 10.7 | 6.90s | 53.1 |
+| 32 | 46ms | 450 | N/A | N/A | N/A | N/A |
 
-Ollama wins on raw throughput (Q4 quantization + llama.cpp). vLLM wins on TTFT stability under load (continuous batching). For a 500ms TTFT SLA: vLLM supports 8 concurrent users, Ollama supports 1.
+GPU (RTX 3090, $0.22/hr): 32x throughput, TTFT stays flat under load. For a 500ms TTFT SLA:
+
+| Engine | Max Concurrent Users Within SLA |
+|--------|--------------------------------|
+| vLLM + RTX 3090 | 16 |
+| vLLM + CPU (8 vCPU) | 8 |
+| Ollama + CPU (8 vCPU) | 1 |
 
 Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cross-engine-comparison.md)
 
 ## Example outputs
 
-- [Readiness report (healthy)](reports/examples/sample-readiness-report.md)
-- [Readiness report (SLA violation at c16)](reports/examples/vllm-cpu-c16-readiness-report.md)
-- [Concurrency sweep (vLLM)](reports/examples/vllm-cpu-concurrency-sweep.md)
-- [Cross-engine comparison](reports/examples/cross-engine-comparison.md)
+- [GPU readiness report (RTX 3090, c16)](reports/examples/gpu-c16-readiness-report.md)
+- [GPU concurrency sweep](reports/examples/gpu-concurrency-sweep.md)
+- [Cross-engine comparison (GPU vs CPU vs Ollama)](reports/examples/cross-engine-comparison.md)
 - [Prometheus diagnosis (c16 under load)](reports/examples/prometheus-diagnosis-c16.md)
+- [CPU readiness report (SLA violation at c16)](reports/examples/vllm-cpu-c16-readiness-report.md)
+- [CPU concurrency sweep](reports/examples/vllm-cpu-concurrency-sweep.md)
 
 ## Project structure
 
