@@ -4,6 +4,10 @@ runs/
 __pycache__/
 .venv/
 prometheus.yml
+*.egg-info/
+build/
+dist/
+.pytest_cache/
 
 todo.md
 NEW_STORY.md

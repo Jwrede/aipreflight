@@ -20,14 +20,21 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: pip install pyyaml pytest
+      - name: Install package
+        run: pip install -e ".[dev]"
 
       - name: Run tests
         run: python -m pytest tests/ -v
 
       - name: Check Python syntax
-        run: python -m py_compile scripts/report.py scripts/diagnose.py scripts/compare.py
+        run: python -m py_compile aipreflight/*.py scripts/report.py scripts/diagnose.py scripts/compare.py
+
+      - name: CLI smoke test (offline)
+        run: |
+          aipreflight check --profile profiles/inference.yml \
+            --probes fixtures/sample-probes.jsonl --out runs/ci || [ $? -eq 1 ]
+          test -f runs/ci/aipreflight-report.json
+          aipreflight report runs/ci | head -1
 
   shellcheck:
     runs-on: ubuntu-latest

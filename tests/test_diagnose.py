@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from diagnose import diagnose, load_probes, percentile
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from aipreflight.diagnose import diagnose, load_probes, percentile
 
 
 def make_probe(ttft_ms=200, latency_ms=3000, status="healthy", ts="2026-01-01T00:00:00Z"):

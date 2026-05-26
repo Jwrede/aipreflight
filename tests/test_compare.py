@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from compare import analyze_run, percentile
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from aipreflight.compare import analyze_run, percentile
 
 
 def write_probes(path: Path, probes: list[dict]):

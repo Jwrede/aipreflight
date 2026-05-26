@@ -26,22 +26,22 @@ readiness-kit         ──>  WHAT to do about it      (automated verdict)
 
 ### 1. Gate (CI/CD)
 
-Deploy a new model, run acceptance probes, get a binary pass/fail. Exit code 0 or 1.
+Deploy a new model, run acceptance probes, get a readiness verdict. Exit code 0 = pass, 1 = fail, 2 = config error, 3 = probe error.
 
 ```bash
-./scripts/gate.sh configs/llmprobe/vllm.yml thresholds.yml 30s 5s
-# GATE: PASS -- safe to route traffic
-# GATE: FAIL -- do not route traffic
+aipreflight check --profile profiles/inference.yml
+# Verdict: PASS  (safe to route traffic)
+# Verdict: FAIL  (do not route traffic)
 ```
 
-Integrates into any CI/CD pipeline. No human in the loop.
+Writes `runs/latest/aipreflight-report.json` and `.md` with the verdict, failed checks, and metrics. Integrates into any CI/CD pipeline with no human in the loop. The legacy `./scripts/gate.sh` is still supported and now wraps this command.
 
 ### 2. Diagnose (incident response)
 
 Users report slow responses. Correlate client observations with server state.
 
 ```bash
-python3 scripts/diagnose.py runs/latest/llmprobe.jsonl --prometheus http://localhost:9090
+aipreflight diagnose runs/latest --prometheus http://localhost:9090
 ```
 
 Output tells you whether the problem is in the network layer (client/server TTFT gap), the inference engine (queue depth, KV cache pressure), or upstream (errors, timeouts).
@@ -62,39 +62,50 @@ Prerequisites: [llmprobe](https://github.com/Jwrede/llmprobe) v1.4.0+, Python 3.
 
 ```bash
 go install github.com/Jwrede/llmprobe@latest
-pip install pyyaml
 git clone https://github.com/Jwrede/aipreflight && cd aipreflight
+pip install -e .
 
-# Point at your endpoint (vLLM, Ollama, or any OpenAI-compatible server)
-vim configs/llmprobe/vllm.yml
+# Point the inference profile at your endpoint (vLLM, Ollama, or any OpenAI-compatible server)
+vim configs/llmprobe/vllm.yml   # referenced by profiles/inference.yml
 
-# Run the readiness gate (exit 0 = pass, exit 1 = fail)
-./scripts/gate.sh configs/llmprobe/vllm.yml thresholds.yml 30s 5s
+# Run the readiness gate (exit 0 = pass, 1 = fail, 2 = config error, 3 = probe error)
+aipreflight check --profile profiles/inference.yml
+
+# Score an existing probe run offline (no endpoint or GPU needed)
+aipreflight check --profile profiles/inference.yml --probes fixtures/sample-probes.jsonl
 
 # Find the concurrency breaking point
 ./scripts/sweep.sh configs/llmprobe/vllm.yml 1,2,4,8,16
 
 # Diagnose with server-side metrics (requires Prometheus scraping your endpoint)
-python3 scripts/diagnose.py runs/latest/llmprobe.jsonl --prometheus http://localhost:9090
+aipreflight diagnose runs/latest --prometheus http://localhost:9090
 ```
 
 ## Configuration
 
-**thresholds.yml** defines your SLA contract:
+A **profile** bundles everything a check needs: how to probe, the SLA contract to gate on, and optional observability settings. `profiles/inference.yml` reproduces the original gate:
 
 ```yaml
-sla:
-  ttft_ms: 500          # Max acceptable TTFT (p95)
-  latency_ms: 10000     # Max acceptable end-to-end latency (p95)
-  min_throughput: 3.0   # Min acceptable throughput (p50, tok/s)
-  max_error_rate: 0.01  # Max acceptable error rate
-
-gate:
-  min_probes: 5         # Minimum probes before making a decision
-  pass_rate: 0.95       # Required healthy probe rate
+name: inference
+probe:
+  config: configs/llmprobe/vllm.yml   # llmprobe config for your endpoint
+  duration: 30s
+  interval: 5s
+thresholds:
+  sla:
+    ttft_ms: 500          # Max acceptable TTFT (p95)
+    latency_ms: 10000     # Max acceptable end-to-end latency (p95)
+    min_throughput: 3.0   # Min acceptable throughput (p50, tok/s)
+    max_error_rate: 0.01  # Max acceptable error rate
+  gate:
+    min_probes: 5         # Minimum probes before making a decision
+    pass_rate: 0.95       # Required healthy probe rate
+observability:
+  prometheus: null        # set to http://localhost:9090 to enable diagnose
+  queries: configs/prometheus/queries.yml
 ```
 
-**configs/prometheus/queries.yml** defines which server metrics to collect for diagnosis.
+Invalid profiles fail fast with exit code 2 and an actionable message. The standalone `thresholds.yml` is still read by the legacy `scripts/gate.sh` path. `configs/prometheus/queries.yml` defines which server metrics to collect for diagnosis.
 
 ## Running Prometheus with vLLM
 
@@ -118,15 +129,15 @@ docker run -d --name prometheus -p 9090:9090 \
 curl -s http://localhost:9090/api/v1/targets | grep '"health":"up"'
 
 # 4. Run probes and diagnose
-./scripts/gate.sh configs/llmprobe/vllm.yml thresholds.yml 30s 5s
-python3 scripts/diagnose.py runs/latest/llmprobe.jsonl --prometheus http://localhost:9090
+aipreflight check --profile profiles/inference.yml
+aipreflight diagnose runs/latest --prometheus http://localhost:9090
 ```
 
 The diagnosis correlates client-observed TTFT with server-reported TTFT. A large gap (>100ms) indicates network or proxy overhead between the client and the inference engine.
 
 ## Grafana Dashboard
 
-A pre-built dashboard visualizes the same metrics used by `scripts/diagnose.py`. Grafana is for inspection; the readiness gate remains the source of deployment decisions.
+A pre-built dashboard visualizes the same metrics used by `aipreflight diagnose`. Grafana is for inspection; the readiness gate remains the source of deployment decisions.
 
 ```bash
 # 1. Make sure prometheus.yml exists
@@ -206,7 +217,17 @@ Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cr
 ## Project structure
 
 ```
-thresholds.yml                    # SLA contract
+aipreflight/                      # Python package (CLI + readiness logic)
+  cli.py                         # `aipreflight` entrypoint (check/report/diagnose)
+  profile.py                     # profile loading + validation
+  probes.py                      # llmprobe runner + JSONL loading
+  analyze.py                     # SLA gate logic
+  report.py                      # unified JSON + Markdown report
+  diagnose.py                    # client + server + GPU correlation
+  compare.py                     # sweep comparison table
+profiles/
+  inference.yml                  # vLLM / OpenAI-compatible endpoint profile
+thresholds.yml                    # legacy SLA contract (scripts/gate.sh)
 prometheus.example.yml            # Prometheus config template
 docker-compose.observability.yml  # Prometheus + Grafana + DCGM stack
 k8s/
@@ -225,11 +246,11 @@ configs/
   llmprobe/runpod-gpu.yml       # RunPod GPU probe template
   prometheus/queries.yml         # Server + GPU metric queries
 scripts/
-  gate.sh                       # CI/CD readiness gate (exit 0/1)
-  diagnose.py                   # Client + server + GPU correlation
+  gate.sh                       # CI/CD readiness gate (wraps `aipreflight check`)
   sweep.sh                      # Concurrency sweep
-  compare.py                    # Sweep comparison table
-  report.py                     # Full readiness report with verdict
+  diagnose.py                   # Wrapper -> `aipreflight diagnose`
+  compare.py                    # Wrapper -> sweep comparison table
+  report.py                     # Wrapper -> standalone readiness report
 docs/
   runpod-gpu-setup.md           # GPU benchmark reproducibility guide
 fixtures/                       # Test data
@@ -250,6 +271,9 @@ reports/examples/               # Example outputs
 - [x] Runbooks for common failure modes
 - [x] Kubernetes manifests with GPU scheduling
 - [x] NVIDIA DCGM GPU metrics in Prometheus/Grafana
+- [x] `aipreflight` CLI with profiles, exit-code contract, and unified JSON/MD report
+- [ ] App and RAG profiles (hosted-API and retrieval readiness)
+- [ ] Cost budget gate and eval/quality gate
 
 ## License
 

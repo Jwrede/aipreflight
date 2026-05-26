@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from report import analyze, check_gate, load_probes, percentile, verdict_from_analysis
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from aipreflight.analyze import analyze, check_gate, load_probes, percentile, verdict_from_analysis
 
 
 def write_jsonl(probes: list[dict], path: Path):

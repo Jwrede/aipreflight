@@ -226,26 +226,26 @@ aipreflight
 
 ## Repository rename checklist
 
-- [ ] Rename GitHub repository from `inference-readiness-kit` to `aipreflight`.
+- [x] Rename GitHub repository from `inference-readiness-kit` to `aipreflight`.
   - Why: the public project name should match the portfolio story and be easy to remember.
   - Done when: the GitHub URL is `https://github.com/Jwrede/aipreflight` and old links redirect.
 
-- [ ] Update local git remote.
+- [x] Update local git remote.
   - What: change `origin` from the old repo URL to the new repo URL after the GitHub rename.
   - Why: pushes should go to the renamed public project.
   - Done when: `git remote -v` shows `aipreflight`.
 
-- [ ] Update `pyproject.toml`.
+- [x] Update `pyproject.toml`.
   - What: change package metadata from `inference-readiness-kit` to `aipreflight`.
   - Why: the installable package name should match the repo and CLI.
   - Done when: package metadata, description, and project URLs use `aipreflight`.
 
-- [ ] Update README title, intro, clone command, and repo links.
+- [x] Update README title, intro, clone command, and repo links.
   - What: replace user-facing `inference-readiness-kit` references with `aipreflight`.
   - Why: the first 30 seconds of reading must tell a coherent story.
   - Done when: README opens with the new name and the broader production readiness promise.
 
-- [ ] Keep compatibility notes for the old name.
+- [x] Keep compatibility notes for the old name.
   - What: add one short note that this project was formerly `inference-readiness-kit`.
   - Why: old blog posts, resumes, and links may still mention the old name.
   - Done when: old readers understand they are in the right place.
@@ -257,7 +257,7 @@ aipreflight
 
 ## CLI shape
 
-- [ ] Add a real `aipreflight` CLI entrypoint.
+- [x] Add a real `aipreflight` CLI entrypoint.
   - What: expose commands through Python packaging, for example:
 
     ```bash
@@ -270,12 +270,12 @@ aipreflight
   - Why: a named CLI makes the project feel like a product, not a folder of scripts.
   - Done when: the current shell scripts can still work, but the primary README path uses `aipreflight`.
 
-- [ ] Keep existing scripts as wrappers during migration.
+- [x] Keep existing scripts as wrappers during migration.
   - What: make `scripts/gate.sh`, `scripts/sweep.sh`, and existing Python scripts call the new CLI or share its internal modules.
   - Why: this avoids breaking the working demo while the project is renamed.
   - Done when: old commands still pass tests and README uses the new commands.
 
-- [ ] Standardize exit codes.
+- [x] Standardize exit codes.
   - What:
     - `0` means readiness pass.
     - `1` means readiness fail.
@@ -286,7 +286,7 @@ aipreflight
 
 ## Profiles
 
-- [ ] Add `profiles/inference.yml`.
+- [x] Add `profiles/inference.yml`.
   - What: current vLLM and OpenAI-compatible endpoint readiness checks.
   - Why: this preserves the current strongest proof: latency, TTFT, throughput, errors, and Prometheus diagnosis.
   - Done when: it can reproduce the current gate behavior.
@@ -315,19 +315,19 @@ aipreflight
     - observability fields for query, retrieved docs, model, prompt version
   - Done when: a RAG demo can fail readiness for poor retrieval even if the server is healthy.
 
-- [ ] Add schema validation for profiles.
+- [x] Add schema validation for profiles.
   - What: validate required fields and print actionable config errors.
   - Why: readiness tools lose trust if they silently ignore missing config.
   - Done when: invalid profile files fail with exit code `2` and a clear message.
 
 ## llmprobe integration
 
-- [ ] Treat `llmprobe` as the external runtime probe adapter.
+- [x] Treat `llmprobe` as the external runtime probe adapter.
   - What: call `llmprobe` from `aipreflight` for endpoint checks.
   - Why: external probes are the cleanest way to measure what users experience.
   - Done when: `aipreflight check --profile profiles/inference.yml` runs `llmprobe` and stores its JSONL output.
 
-- [ ] Create a stable adapter contract for probe outputs.
+- [x] Create a stable adapter contract for probe outputs.
   - What: define the fields `aipreflight` expects from `llmprobe` JSONL.
   - Why: the flagship should not break whenever `llmprobe` output evolves.
   - Done when: tests load fixture JSONL and validate parsing.
@@ -336,6 +336,51 @@ aipreflight
   - What: `profiles/app.yml` should not require `llmprobe` unless endpoint probing is configured.
   - Why: hosted-API teams may start with app-level smoke tests and evals.
   - Done when: app profile works without a local `llmprobe` install.
+
+## Dependency installation (deferred)
+
+Status as of Phase 2: not built. The current behavior is good enough for now.
+`llmprobe` is a separate Go binary, so it cannot be a Python dependency in
+`pyproject.toml`. We document `go install github.com/Jwrede/llmprobe@latest` as a
+manual prerequisite, and `aipreflight check` already fails fast with exit code 2
+and an actionable message when the binary is missing. CI never needs `llmprobe`
+because tests run offline through `aipreflight check --probes <fixture>`.
+
+What we would add to smooth onboarding, and why it is deferred:
+
+- [ ] Add `scripts/install-deps.sh` with a no-Go install path.
+  - What: detect OS/arch, download the matching prebuilt `llmprobe` release tarball
+    from GitHub Releases (assets exist for linux/darwin/windows, amd64/arm64),
+    verify against `checksums.txt`, install to `~/.local/bin`, and warn if that dir
+    is not on PATH. Fall back to `go install` only for building from source.
+  - Why: removes the hard Go-toolchain requirement. A user with only `curl` and
+    `tar` (standard on macOS/Linux) can install the probe.
+  - Why deferred: the manual `go install` line plus the exit-2 message already
+    unblock setup. A download-and-extract script needs checksum verification,
+    PATH handling, and a Windows story (`.zip`, not `.tar.gz`) to be trustworthy,
+    which is more surface area than Phase 2 needed.
+  - Done when: `curl -fsSL .../install-deps.sh | bash` installs a working
+    `llmprobe` on macOS/Linux without Go, with checksum verification.
+
+- [ ] Add an `aipreflight doctor` subcommand.
+  - What: a read-only environment check (llmprobe present and version-compatible,
+    Python version, profiles parse, optional Prometheus reachability) with an
+    opt-in `--install` flag that calls `install-deps.sh`.
+  - Why: one command tells a new user or CI job what is missing instead of failing
+    mid-`check`. Run after `pip install -e .`, during onboarding, in CI before the
+    gate job, or when `check` exits 2. NOT run inside every `check` (the hot path
+    already validates its own dependencies; coupling a read-only verb to an install
+    side effect is wrong).
+  - Why deferred: with only `llmprobe` to verify, `doctor` is thin and overlaps the
+    existing exit-2 message and the one-liner above. Its value grows in Phase 3-4
+    when there are more dependencies to check (tokentoll, eval adapters, telemetry
+    endpoints). Build it then so it checks enough to earn its place.
+  - Done when: `aipreflight doctor` reports environment readiness, `--install` fixes
+    a missing `llmprobe`, and a test covers both paths with `shutil.which` mocked.
+
+- [ ] Add the install one-liner to the README once `install-deps.sh` exists.
+  - Why: matches the "zero-friction first experience" goal (curl install and run).
+  - Done when: README shows the one-liner alongside the manual `go install` option.
 
 ## tokentoll integration
 
@@ -398,17 +443,17 @@ aipreflight
 
 ## Reporting
 
-- [ ] Produce one machine-readable report.
+- [x] Produce one machine-readable report.
   - What: write `runs/latest/aipreflight-report.json`.
   - Why: CI/CD, dashboards, and future integrations need structured output.
   - Done when: JSON report includes verdict, failed checks, warnings, metrics, thresholds, and artifact paths.
 
-- [ ] Produce one human-readable report.
+- [x] Produce one human-readable report.
   - What: write `runs/latest/aipreflight-report.md`.
   - Why: recruiters, engineering managers, and teams need to understand the decision quickly.
   - Done when: report has sections for quality, cost, latency, observability, deployment, and recommended action.
 
-- [ ] Keep the verdict blunt.
+- [x] Keep the verdict blunt.
   - What: use `PASS`, `FAIL`, and `WARN`, with a short reason.
   - Why: the tool is valuable because it makes deployment decisions clearer.
   - Done when: the first screen of the report tells the user whether to ship.
@@ -425,7 +470,7 @@ aipreflight
   - Why: RAG is a common customer problem and makes the portfolio story concrete.
   - Done when: bad retrieval can fail readiness while infrastructure still passes.
 
-- [ ] Keep the current vLLM example.
+- [x] Keep the current vLLM example.
   - What: preserve Kubernetes, Prometheus, Grafana, DCGM, and RunPod setup.
   - Why: this remains the strongest proof for inference infrastructure roles.
   - Done when: the vLLM path is documented as the `inference` profile.
@@ -463,16 +508,16 @@ aipreflight
 
 ## Tests
 
-- [ ] Keep current unit tests green during every step.
+- [x] Keep current unit tests green during every step.
   - Why: the existing inference gate already works and should not regress.
   - Done when: `pytest` passes after each migration phase.
 
-- [ ] Add CLI tests.
+- [x] Add CLI tests.
   - What: test `aipreflight check`, `aipreflight report`, and invalid config handling.
   - Why: the CLI becomes the primary product surface.
   - Done when: tests verify exit codes and generated artifacts.
 
-- [ ] Add profile validation tests.
+- [x] Add profile validation tests.
   - What: valid and invalid profile fixtures.
   - Why: most user errors will be configuration errors.
   - Done when: bad config fails clearly.
@@ -484,20 +529,20 @@ aipreflight
 
 ## Release sequence
 
-### Phase 1: Rename without behavior changes
+### Phase 1: Rename without behavior changes (DONE)
 
-- [ ] Rename repo, package metadata, README title, URLs, and docs references.
-- [ ] Keep old scripts working.
-- [ ] Run tests.
+- [x] Rename repo, package metadata, README title, URLs, and docs references.
+- [x] Keep old scripts working.
+- [x] Run tests.
 
 Why: establish the new public identity without risking the working inference functionality.
 
-### Phase 2: Add CLI and profiles
+### Phase 2: Add CLI and profiles (DONE)
 
-- [ ] Add `aipreflight` CLI.
-- [ ] Add `profiles/inference.yml`.
-- [ ] Move current threshold behavior behind the inference profile.
-- [ ] Generate JSON and Markdown reports from the CLI.
+- [x] Add `aipreflight` CLI.
+- [x] Add `profiles/inference.yml`.
+- [x] Move current threshold behavior behind the inference profile.
+- [x] Generate JSON and Markdown reports from the CLI.
 
 Why: turn the current scripts into a product-shaped tool.
 

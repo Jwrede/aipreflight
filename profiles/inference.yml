@@ -1,0 +1,33 @@
+# Inference readiness profile.
+# Reproduces the original gate behavior: probe a vLLM / OpenAI-compatible
+# endpoint with llmprobe and gate on latency, throughput, and error SLAs.
+#
+# Run with:
+#   aipreflight check --profile profiles/inference.yml
+#   aipreflight check --profile profiles/inference.yml --probes runs/latest/llmprobe.jsonl  # offline
+
+name: inference
+description: vLLM / OpenAI-compatible endpoint readiness
+
+probe:
+  tool: llmprobe
+  config: configs/llmprobe/vllm.yml
+  duration: 30s
+  interval: 5s
+
+thresholds:
+  sla:
+    ttft_ms: 500          # Max acceptable TTFT (p95)
+    latency_ms: 10000     # Max acceptable end-to-end latency (p95)
+    min_throughput: 3.0   # Min acceptable throughput (p50, tok/s)
+    max_error_rate: 0.01  # Max acceptable error rate
+  gate:
+    min_probes: 5         # Minimum probes before making a decision
+    pass_rate: 0.95       # Required healthy probe rate
+
+observability:
+  prometheus: null                          # set to e.g. http://localhost:9090 to enable diagnose
+  queries: configs/prometheus/queries.yml
+
+report:
+  outdir: runs
