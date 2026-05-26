@@ -73,8 +73,8 @@ The client-side probes come from [llmprobe](https://github.com/Jwrede/llmprobe),
 ```bash
 go install github.com/Jwrede/llmprobe@latest
 pip install pyyaml
-git clone https://github.com/Jwrede/inference-readiness-kit && cd inference-readiness-kit
+git clone https://github.com/Jwrede/aipreflight && cd aipreflight
 ./scripts/gate.sh configs/llmprobe/vllm.yml thresholds.yml 30s 5s
 ```
 
-GitHub: https://github.com/Jwrede/inference-readiness-kit
+GitHub: https://github.com/Jwrede/aipreflight

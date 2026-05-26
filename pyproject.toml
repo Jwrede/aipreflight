@@ -1,7 +1,7 @@
 [project]
-name = "inference-readiness-kit"
+name = "aipreflight"
 version = "0.1.0"
-description = "Automated go/no-go decisions for LLM inference deployments"
+description = "Production readiness gate for AI applications and LLM inference endpoints"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
@@ -15,4 +15,4 @@ dev = ["pytest>=7.0"]
 testpaths = ["tests"]
 
 [project.urls]
-Repository = "https://github.com/Jwrede/inference-readiness-kit"
+Repository = "https://github.com/Jwrede/aipreflight"

@@ -1,10 +1,12 @@
-![inference-readiness-kit](docs/thumbnail.png)
+![aipreflight](docs/thumbnail.png)
 
-# inference-readiness-kit
+# aipreflight
 
-Automated go/no-go decisions for LLM inference deployments.
+SRE-style preflight checks for AI applications. One command, one readiness report, one ship/block verdict.
 
-Like readiness probes for Kubernetes, but for LLM inference SLAs. Combines external acceptance testing ([llmprobe](https://github.com/Jwrede/llmprobe)) with internal server telemetry (Prometheus) to make deployment decisions.
+aipreflight brings the deployment discipline of CI gates, smoke tests, and SLO-based rollouts to LLM apps, RAG systems, and inference endpoints. It turns external acceptance testing ([llmprobe](https://github.com/Jwrede/llmprobe)) and internal server telemetry (Prometheus) into an automated go/no-go decision before traffic is routed.
+
+> Formerly `inference-readiness-kit`. The project keeps its strongest proof, SLA gating for self-hosted inference, and is broadening into a general production readiness gate for AI applications. See [TODO.md](TODO.md) for the implementation plan. The current release covers the inference path described below.
 
 ![demo](demo/demo.gif)
 
@@ -61,7 +63,7 @@ Prerequisites: [llmprobe](https://github.com/Jwrede/llmprobe) v1.4.0+, Python 3.
 ```bash
 go install github.com/Jwrede/llmprobe@latest
 pip install pyyaml
-git clone https://github.com/Jwrede/inference-readiness-kit && cd inference-readiness-kit
+git clone https://github.com/Jwrede/aipreflight && cd aipreflight
 
 # Point at your endpoint (vLLM, Ollama, or any OpenAI-compatible server)
 vim configs/llmprobe/vllm.yml
@@ -150,7 +152,7 @@ docker compose -f docker-compose.observability.yml down
 
 ## Kubernetes Deployment
 
-Deploy vLLM with GPU scheduling and use inference-readiness-kit as the readiness probe:
+Deploy vLLM with GPU scheduling and use aipreflight as the readiness probe:
 
 ```bash
 # Deploy vLLM with GPU and readiness probes
@@ -163,7 +165,7 @@ kubectl apply -f k8s/servicemonitor.yml
 
 # Run readiness gate as a Job (post-deploy validation)
 kubectl apply -f k8s/readiness-gate-job.yml
-kubectl logs -f job/inference-readiness-gate
+kubectl logs -f job/aipreflight-gate
 ```
 
 The Deployment uses `nvidia.com/gpu` resource requests, a `/health` readiness probe for basic liveness, and the readiness gate Job for SLA validation after deployment. DCGM exporter feeds GPU utilization, memory, and temperature into Prometheus alongside vLLM inference metrics.
