@@ -130,12 +130,20 @@ exceeds the budget in the profile.
 
 ## Quick start
 
-Prerequisites: [llmprobe](https://github.com/Jwrede/llmprobe) v1.4.0+, Python 3.10+. The app profile additionally uses [tokentoll](https://github.com/Jwrede/tokentoll) (`pip install tokentoll`).
+Prerequisites: Python 3.10+. The inference profile needs [llmprobe](https://github.com/Jwrede/llmprobe) v1.4.0+. The app profile additionally uses [tokentoll](https://github.com/Jwrede/tokentoll) (`pip install tokentoll`). The app and rag profiles need neither llmprobe nor a GPU.
 
 ```bash
-go install github.com/Jwrede/llmprobe@latest
 git clone https://github.com/Jwrede/aipreflight && cd aipreflight
 pip install -e .
+
+# Install the llmprobe binary (only needed for the inference profile).
+# Prebuilt, no Go toolchain (macOS/Linux):
+curl -fsSL https://raw.githubusercontent.com/Jwrede/aipreflight/main/scripts/install-deps.sh | bash
+# ... or build from source:
+go install github.com/Jwrede/llmprobe@latest
+
+# Check that your environment is ready (Python, llmprobe, tokentoll, profiles)
+aipreflight doctor
 
 # Point the inference profile at your endpoint (vLLM, Ollama, or any OpenAI-compatible server)
 vim configs/llmprobe/vllm.yml   # referenced by profiles/inference.yml
@@ -296,7 +304,8 @@ Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cr
 
 ```
 aipreflight/                      # Python package (CLI + readiness logic)
-  cli.py                         # `aipreflight` entrypoint (check/report/diagnose)
+  cli.py                         # `aipreflight` entrypoint (check/report/diagnose/doctor)
+  doctor.py                      # environment readiness checks (`aipreflight doctor`)
   profile.py                     # profile loading + validation (inference | app | rag)
   checks.py                      # generic CheckResult + verdict aggregation
   probes.py                      # llmprobe runner + JSONL loading
@@ -333,6 +342,7 @@ configs/
   llmprobe/runpod-gpu.yml       # RunPod GPU probe template
   prometheus/queries.yml         # Server + GPU metric queries
 scripts/
+  install-deps.sh               # install a prebuilt llmprobe without Go (checksum-verified)
   gate.sh                       # CI/CD readiness gate (wraps `aipreflight check`)
   sweep.sh                      # Concurrency sweep
   diagnose.py                   # Wrapper -> `aipreflight diagnose`
@@ -363,6 +373,7 @@ reports/examples/               # Example outputs
 - [x] Runnable hosted-API example app (FastAPI, offline-testable)
 - [x] Eval/quality gate (run the eval suite and gate on pass rate + metrics)
 - [x] RAG profile and offline example (retrieval + answer quality readiness)
+- [x] No-Go install script and `aipreflight doctor` environment check
 
 ## What this does not replace
 

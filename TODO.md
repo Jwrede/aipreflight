@@ -351,7 +351,7 @@ because tests run offline through `aipreflight check --probes <fixture>`.
 
 What we would add to smooth onboarding, and why it is deferred:
 
-- [ ] Add `scripts/install-deps.sh` with a no-Go install path.
+- [x] Add `scripts/install-deps.sh` with a no-Go install path.
   - What: detect OS/arch, download the matching prebuilt `llmprobe` release tarball
     from GitHub Releases (assets exist for linux/darwin/windows, amd64/arm64),
     verify against `checksums.txt`, install to `~/.local/bin`, and warn if that dir
@@ -365,7 +365,7 @@ What we would add to smooth onboarding, and why it is deferred:
   - Done when: `curl -fsSL .../install-deps.sh | bash` installs a working
     `llmprobe` on macOS/Linux without Go, with checksum verification.
 
-- [ ] Add an `aipreflight doctor` subcommand.
+- [x] Add an `aipreflight doctor` subcommand.
   - What: a read-only environment check (llmprobe present and version-compatible,
     Python version, profiles parse, optional Prometheus reachability) with an
     opt-in `--install` flag that calls `install-deps.sh`.
@@ -381,7 +381,7 @@ What we would add to smooth onboarding, and why it is deferred:
   - Done when: `aipreflight doctor` reports environment readiness, `--install` fixes
     a missing `llmprobe`, and a test covers both paths with `shutil.which` mocked.
 
-- [ ] Add the install one-liner to the README once `install-deps.sh` exists.
+- [x] Add the install one-liner to the README once `install-deps.sh` exists.
   - Why: matches the "zero-friction first experience" goal (curl install and run).
   - Done when: README shows the one-liner alongside the manual `go install` option.
 

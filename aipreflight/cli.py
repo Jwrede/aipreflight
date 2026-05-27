@@ -4,6 +4,7 @@ Subcommands:
   check     run a readiness check against a profile and emit a verdict + report
   report    re-render the Markdown report for a completed run
   diagnose  correlate probe data with server-side Prometheus metrics
+  doctor    check the local environment for required and optional dependencies
 
 Exit codes:
   0  readiness pass (PASS or WARN)
@@ -189,6 +190,27 @@ def cmd_diagnose(args: argparse.Namespace) -> int:
     return EXIT_PASS
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    from aipreflight import doctor as doctor_mod
+    from aipreflight.checks import FAIL
+
+    if args.install:
+        rc = doctor_mod.install_deps(source=args.source)
+        if rc != 0:
+            return EXIT_CONFIG
+
+    profiles = [args.profile] if args.profile else None
+    results = doctor_mod.run_doctor(profiles, args.prometheus)
+    width = max(len(r.name) for r in results)
+    any_fail = False
+    for r in results:
+        if r.status == FAIL:
+            any_fail = True
+        print(f"  {r.name:<{width}}  {r.status:<4}  {r.summary}")
+    print(f"\nEnvironment: {'NOT READY' if any_fail else 'READY'}")
+    return EXIT_CONFIG if any_fail else EXIT_PASS
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aipreflight",
@@ -215,6 +237,13 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--prometheus-data", help="Pre-collected Prometheus metrics JSON file.")
     d.add_argument("--queries", default="configs/prometheus/queries.yml", help="Prometheus queries file.")
     d.set_defaults(func=cmd_diagnose)
+
+    doc = sub.add_parser("doctor", help="Check the local environment for required and optional dependencies.")
+    doc.add_argument("--profile", help="Check that this profile parses (default: the shipped profiles).")
+    doc.add_argument("--prometheus", help="Also check that this Prometheus endpoint is reachable.")
+    doc.add_argument("--install", action="store_true", help="Install a prebuilt llmprobe first (runs scripts/install-deps.sh).")
+    doc.add_argument("--source", action="store_true", help="With --install, build from source via `go install`.")
+    doc.set_defaults(func=cmd_doctor)
 
     return parser
 
