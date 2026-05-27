@@ -40,7 +40,11 @@ def _require(cond: bool, msg: str) -> None:
         raise ProfileError(msg)
 
 
-VALID_KINDS = ("inference", "app")
+VALID_KINDS = ("inference", "app", "rag")
+
+
+def _is_eval_gate(cfg: dict) -> bool:
+    return any(cfg.get(k) is not None for k in ("min_pass_rate", "metrics"))
 
 
 def _validate(raw: dict, path: str) -> dict:
@@ -68,7 +72,7 @@ def _validate(raw: dict, path: str) -> dict:
 
     if kind == "inference":
         return {**common, **_validate_inference(raw, path)}
-    return {**common, **_validate_app(raw, path)}
+    return {**common, **_validate_app(raw, path, kind)}
 
 
 def _validate_inference(raw: dict, path: str) -> dict:
@@ -105,15 +109,28 @@ def _validate_inference(raw: dict, path: str) -> dict:
     }
 
 
-def _validate_app(raw: dict, path: str) -> dict:
+def _validate_app(raw: dict, path: str, kind: str = "app") -> dict:
     sections = ("cost", "evals", "observability", "deployment")
     present = {s: raw.get(s) for s in sections if raw.get(s) is not None}
     _require(
         present,
-        f"Profile {path}: an app profile must define at least one of {sections}.",
+        f"Profile {path}: an {kind} profile must define at least one of {sections}.",
     )
     for name, value in present.items():
         _require(isinstance(value, dict), f"Profile {path}: '{name}' must be a mapping.")
+
+    if kind == "rag":
+        evals = present.get("evals")
+        _require(
+            isinstance(evals, dict),
+            f"Profile {path}: a rag profile must define an 'evals' section "
+            "(RAG readiness is a quality gate, not just infrastructure).",
+        )
+        _require(
+            _is_eval_gate(evals),
+            f"Profile {path}: a rag 'evals' section must gate on results "
+            "(set 'min_pass_rate' and/or 'metrics').",
+        )
 
     cost = present.get("cost")
     if cost is not None:

@@ -68,11 +68,11 @@ def build_report(
 
 
 def build_app_report(results: list[CheckResult], profile: dict, artifacts: dict | None = None) -> dict:
-    """Build the readiness report dict for an app-kind profile."""
+    """Build the readiness report dict for an app- or rag-kind profile."""
     return {
         "verdict": aggregate_verdict(results),
         "profile": profile["name"],
-        "kind": "app",
+        "kind": profile.get("kind", "app"),
         "generated": datetime.now(timezone.utc).isoformat(),
         "checks": [r.to_dict() for r in results],
         "failed_checks": [r.summary for r in results if r.status == FAIL],
@@ -81,11 +81,37 @@ def build_app_report(results: list[CheckResult], profile: dict, artifacts: dict 
     }
 
 
+def _quality_metrics(report: dict) -> list[tuple[str, str, str]]:
+    """Extract eval pass rate and reported metrics as (name, value, gate) rows."""
+    evals = next((c for c in report.get("checks", []) if c["name"] == "evals"), None)
+    if not evals:
+        return []
+    d = evals.get("details", {})
+    rows: list[tuple[str, str, str]] = []
+    rate = d.get("pass_rate")
+    if rate is not None:
+        min_rate = d.get("min_pass_rate")
+        gate = f">= {min_rate:.0%}" if min_rate is not None else "-"
+        rows.append(("pass_rate", f"{rate:.0%}", gate))
+    gates = d.get("metric_gates", {}) or {}
+    for name, value in (d.get("reported_metrics", {}) or {}).items():
+        bounds = gates.get(name, {})
+        parts = []
+        if bounds.get("min") is not None:
+            parts.append(f">= {bounds['min']:.2f}")
+        if bounds.get("max") is not None:
+            parts.append(f"<= {bounds['max']:.2f}")
+        gate = ", ".join(parts) if parts else "-"
+        rows.append((name, f"{value:.2f}" if isinstance(value, (int, float)) else str(value), gate))
+    return rows
+
+
 def _render_app_markdown(report: dict) -> str:
+    kind = report.get("kind", "app")
     lines = []
     lines.append(f"# aipreflight: {report['verdict']}")
     lines.append("")
-    lines.append(f"Profile: `{report['profile']}` (kind: app)")
+    lines.append(f"Profile: `{report['profile']}` (kind: {kind})")
     lines.append(f"Generated: {report['generated']}")
     lines.append("")
     lines.append("## Checks")
@@ -95,6 +121,16 @@ def _render_app_markdown(report: dict) -> str:
     for c in report["checks"]:
         lines.append(f"| {c['name']} | {c['status']} | {c['summary']} |")
     lines.append("")
+
+    quality = _quality_metrics(report)
+    if quality:
+        lines.append("## Quality metrics")
+        lines.append("")
+        lines.append("| Metric | Value | Gate |")
+        lines.append("|--------|-------|------|")
+        for name, value, gate in quality:
+            lines.append(f"| {name} | {value} | {gate} |")
+        lines.append("")
     if report["failed_checks"]:
         lines.append("## Failed checks")
         lines.append("")

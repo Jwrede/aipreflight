@@ -1,0 +1,41 @@
+# RAG readiness profile. Needs no llmprobe or GPU.
+#
+# A RAG system can be "up" (the service responds, latency is fine) while still
+# being unsafe to ship: retrieval regressed, answers stopped citing sources, or
+# the model started answering unanswerable questions. This profile gates on those
+# quality signals, not just infrastructure health.
+#
+# Run with:
+#   aipreflight check --profile profiles/rag.yml
+#
+# The eval command runs the offline RAG pipeline in examples/rag-app and emits the
+# metrics gated below. Set AIPREFLIGHT_RAG_BROKEN=1 to see readiness FAIL on a
+# retrieval regression while observability and the runbook still pass.
+
+name: rag
+kind: rag
+description: Production readiness for a retrieval-augmented generation app
+
+evals:
+  command: "python examples/rag-app/evals/run_evals.py"
+  min_pass_rate: 0.9
+  metrics:
+    retrieval_precision: {min: 0.8}
+    answer_quality: {min: 0.7}
+    citation_rate: {min: 0.9}
+    hallucination_rate: {max: 0.05}
+    empty_retrieval_handled: {min: 0.9}
+
+observability:
+  config: examples/rag-app/observability.yml
+  required_fields:
+    - request_id
+    - query
+    - retrieved_doc_ids
+    - model
+    - prompt_version
+    - latency_ms
+    - cost_usd
+
+deployment:
+  rollback_runbook: runbooks/rollback.md

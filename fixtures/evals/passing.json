@@ -1,0 +1,15 @@
+{
+  "total": 20,
+  "passed": 19,
+  "pass_rate": 0.95,
+  "metrics": {
+    "retrieval_precision": 0.88,
+    "answer_quality": 0.82,
+    "hallucination_rate": 0.0,
+    "citation_rate": 1.0
+  },
+  "cases": [
+    {"name": "capital_of_france", "passed": true},
+    {"name": "unanswerable_abstains", "passed": true}
+  ]
+}

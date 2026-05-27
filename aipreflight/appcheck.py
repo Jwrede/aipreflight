@@ -1,9 +1,13 @@
-"""Readiness checks for hosted-API AI applications (profile kind: app).
+"""Readiness checks for hosted-API AI and RAG applications (profile kind: app, rag).
 
-These are config-level checks that need no llmprobe or GPU: cost budget,
-eval-suite presence, observability fields, and a rollback path. Each returns a
-CheckResult; the CLI aggregates them into one verdict. Actually running the eval
-suite is Phase 4; here we verify it is configured and present.
+These are checks that need no llmprobe or GPU: cost budget, eval quality,
+observability fields, and a rollback path. Each returns a CheckResult; the CLI
+aggregates them into one verdict.
+
+The eval check has two modes. When the profile asks for a quality gate (it sets
+min_pass_rate, metrics, or results_file) the eval command is run and scored by
+aipreflight.evals. Otherwise this only verifies an eval suite is configured and
+present, leaving execution to CI.
 """
 
 from pathlib import Path
@@ -12,6 +16,11 @@ import yaml
 
 from aipreflight.checks import FAIL, PASS, SKIP, WARN, CheckResult
 from aipreflight.cost import check_cost
+from aipreflight.evals import check_eval_gate
+
+
+def _is_quality_gate(cfg: dict) -> bool:
+    return any(cfg.get(k) is not None for k in ("min_pass_rate", "metrics", "results_file"))
 
 
 def check_evals(cfg: dict | None) -> CheckResult:
@@ -19,13 +28,19 @@ def check_evals(cfg: dict | None) -> CheckResult:
         return CheckResult("evals", SKIP, "no eval suite configured")
     command = cfg.get("command")
     path = cfg.get("path")
+
+    if _is_quality_gate(cfg):
+        if not command and not cfg.get("results_file"):
+            return CheckResult("evals", FAIL, "eval quality gate needs a 'command' or 'results_file'")
+        return check_eval_gate(cfg)
+
     if not command:
         return CheckResult("evals", FAIL, "evals section present but no 'command' configured")
     if path and not Path(path).exists():
         return CheckResult("evals", FAIL, f"eval path not found: {path}", {"command": command})
     return CheckResult(
         "evals", PASS,
-        f"eval suite configured: `{command}` (run in CI / Phase 4 quality gate)",
+        f"eval suite configured: `{command}` (add min_pass_rate/metrics to gate on results)",
         {"command": command, "path": path},
     )
 

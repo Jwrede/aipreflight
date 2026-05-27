@@ -1,0 +1,13 @@
+# Telemetry fields the RAG app emits per query. aipreflight's rag profile checks
+# that the debugging-critical fields are declared here.
+fields:
+  - request_id
+  - query
+  - retrieved_doc_ids
+  - model
+  - prompt_version
+  - input_tokens
+  - output_tokens
+  - latency_ms
+  - cost_usd
+  - error_type

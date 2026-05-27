@@ -303,7 +303,7 @@ aipreflight
     - rollback/runbook link present
   - Done when: a simple API-backed AI app can be checked without self-hosted inference.
 
-- [ ] Add `profiles/rag.yml`.
+- [x] Add `profiles/rag.yml`.
   - What: RAG-specific checks.
   - Why: RAG is one of the most common AI productionization use cases and shows business relevance.
   - Checks:
@@ -313,7 +313,10 @@ aipreflight
     - empty retrieval handling
     - latency and cost budget
     - observability fields for query, retrieved docs, model, prompt version
-  - Done when: a RAG demo can fail readiness for poor retrieval even if the server is healthy.
+  - Done: the rag profile gates retrieval_precision, answer_quality, citation_rate,
+    hallucination_rate, and empty_retrieval_handled, plus observability fields and a
+    rollback runbook. `AIPREFLIGHT_RAG_BROKEN=1 aipreflight check --profile profiles/rag.yml`
+    FAILs on a retrieval regression while observability and rollback still pass.
 
 - [x] Add schema validation for profiles.
   - What: validate required fields and print actionable config errors.
@@ -409,20 +412,22 @@ What we would add to smooth onboarding, and why it is deferred:
 
 ## Evals integration
 
-- [ ] Add a simple eval runner interface.
+- [x] Add a simple eval runner interface.
   - What: support a local command that returns JSON results, for example `pytest`, `promptfoo`, `ragas`, or a custom script.
   - Why: quality is the missing layer between "the endpoint is up" and "the AI feature is safe to ship".
-  - Done when: a profile can define an eval command and a minimum pass rate.
+  - Done: `aipreflight/evals.py` runs a `command` (stdout JSON) or reads a `results_file`,
+    and a profile's `evals` section defines `min_pass_rate` and/or per-metric `metrics` gates.
 
-- [ ] Support quality gates.
+- [x] Support quality gates.
   - What: fail readiness when eval pass rate, answer quality, retrieval precision, or regression threshold is below target.
   - Why: production AI should not ship only because infrastructure metrics are green.
-  - Done when: reports show quality pass/fail next to latency and cost.
+  - Done: the eval check FAILs the verdict when pass rate or any gated metric is out of
+    bounds, and the report shows a Quality metrics table next to cost and observability.
 
-- [ ] Add fixtures for passing and failing eval results.
+- [x] Add fixtures for passing and failing eval results.
   - What: create small JSON fixtures for deterministic tests.
   - Why: eval integration must be testable without calling live LLM APIs.
-  - Done when: tests cover pass, fail, and malformed eval output.
+  - Done: `fixtures/evals/{passing,failing,malformed}.json` with tests covering pass, fail, and malformed output.
 
 ## Observability checks
 
@@ -465,10 +470,12 @@ What we would add to smooth onboarding, and why it is deferred:
   - Why: this proves `aipreflight` is not only for self-hosted inference.
   - Done when: `profiles/app.yml` can check it end to end.
 
-- [ ] Add a RAG example.
+- [x] Add a RAG example.
   - What: a minimal RAG app with a tiny document set, retrieval eval, answer eval, and cost gate.
   - Why: RAG is a common customer problem and makes the portfolio story concrete.
-  - Done when: bad retrieval can fail readiness while infrastructure still passes.
+  - Done: `examples/rag-app` is a fully offline pipeline (no LLM, no network) with a 5-doc
+    corpus, a keyword retriever, a citing/abstaining answerer, and an eval script. Bad
+    retrieval (`AIPREFLIGHT_RAG_BROKEN=1`) fails readiness while infrastructure passes.
 
 - [x] Keep the current vLLM example.
   - What: preserve Kubernetes, Prometheus, Grafana, DCGM, and RunPod setup.
@@ -522,10 +529,12 @@ What we would add to smooth onboarding, and why it is deferred:
   - Why: most user errors will be configuration errors.
   - Done when: bad config fails clearly.
 
-- [ ] Add integration tests with fake adapters.
+- [x] Add integration tests with fake adapters.
   - What: fake `llmprobe`, fake `tokentoll`, fake eval output, and fake Prometheus response.
   - Why: CI must be deterministic and not require paid APIs or GPUs.
-  - Done when: full readiness pass/fail can be tested offline.
+  - Done: `tests/test_integration.py` runs full app and rag readiness through the CLI with a
+    probes JSONL fixture, a monkeypatched tokentoll scan, eval results-file fixtures, and a
+    Prometheus metrics file, asserting both PASS and FAIL verdicts offline.
 
 ## Release sequence
 
@@ -555,12 +564,12 @@ Why: turn the current scripts into a product-shaped tool.
 
 Why: broaden the project beyond teams that host their own inference.
 
-### Phase 4: Add eval and RAG readiness
+### Phase 4: Add eval and RAG readiness (DONE)
 
-- [ ] Add eval runner adapter.
-- [ ] Add `profiles/rag.yml`.
-- [ ] Add RAG example.
-- [ ] Add quality gates to the report.
+- [x] Add eval runner adapter.
+- [x] Add `profiles/rag.yml`.
+- [x] Add RAG example.
+- [x] Add quality gates to the report.
 
 Why: quality gates are the biggest missing piece in the current project.
 

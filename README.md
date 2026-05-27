@@ -6,7 +6,7 @@ SRE-style preflight checks for AI applications. One command, one readiness repor
 
 aipreflight brings the deployment discipline of CI gates, smoke tests, and SLO-based rollouts to LLM apps, RAG systems, and inference endpoints. It turns external acceptance testing ([llmprobe](https://github.com/Jwrede/llmprobe)) and internal server telemetry (Prometheus) into an automated go/no-go decision before traffic is routed.
 
-> Formerly `inference-readiness-kit`. The project keeps its strongest proof, SLA gating for self-hosted inference, and is broadening into a general production readiness gate for AI applications. See [TODO.md](TODO.md) for the implementation plan. The current release covers the inference path described below.
+> Formerly `inference-readiness-kit`. The project keeps its strongest proof, SLA gating for self-hosted inference, and has broadened into a general production readiness gate for AI applications. It now ships three profiles: `inference` (SLA gating), `app` (cost, evals, observability, rollback for hosted-API apps), and `rag` (retrieval and answer quality). See [TODO.md](TODO.md) for the implementation plan.
 
 ![demo](demo/demo.gif)
 
@@ -17,9 +17,9 @@ Server metrics say "healthy" while users experience 3-second TTFT. The load bala
 ## How it works
 
 ```
-llmprobe (external)  ──>  IS there a problem?     (client-side truth)
-Prometheus (internal) ──>  WHY is there a problem?  (server-side explanation)
-readiness-kit         ──>  WHAT to do about it      (automated verdict)
+llmprobe (external)   -->  IS there a problem?     (client-side truth)
+Prometheus (internal) -->  WHY is there a problem?  (server-side explanation)
+aipreflight           -->  WHAT to do about it      (automated verdict)
 ```
 
 ## Three workflows
@@ -56,7 +56,7 @@ Find the concurrency level where your endpoint breaks its SLA.
 
 Produces a comparison table showing how TTFT, latency, and throughput degrade under load. Tells you exactly how many concurrent users your config supports within SLA.
 
-## Profiles: inference and app
+## Profiles: inference, app, and rag
 
 A profile defines what "ready" means for one kind of target. `aipreflight check`
 runs the right checks and aggregates them into one verdict (PASS / WARN / FAIL).
@@ -64,12 +64,41 @@ runs the right checks and aggregates them into one verdict (PASS / WARN / FAIL).
 | Profile | Kind | Needs | Checks |
 |---------|------|-------|--------|
 | `profiles/inference.yml` | `inference` | llmprobe (+ optional Prometheus) | TTFT, latency, throughput, error rate vs SLA |
-| `profiles/app.yml` | `app` | nothing self-hosted | cost budget (tokentoll), eval suite present, observability fields, rollback runbook |
+| `profiles/app.yml` | `app` | nothing self-hosted | cost budget (tokentoll), eval quality gate, observability fields, rollback runbook |
+| `profiles/rag.yml` | `rag` | nothing self-hosted | retrieval precision, answer quality, citation rate, hallucination rate, empty-retrieval handling, observability, rollback |
 
 The `app` profile is for teams calling hosted APIs that still need production
 discipline: a cost gate, a quality eval suite, debuggable telemetry, and a
 rollback path. It runs with no GPU and no probe. See
 [examples/hosted-api-app](examples/hosted-api-app) for a runnable target.
+
+The `rag` profile gates the quality signals that infrastructure checks miss: a
+RAG system can be "up" while retrieval has regressed, answers have stopped citing
+sources, or the model has begun answering unanswerable questions. See
+[examples/rag-app](examples/rag-app) for a runnable offline target that fails
+readiness on a retrieval regression while the service itself stays healthy.
+
+## Quality gate
+
+`app` and `rag` profiles can gate on the results of an eval suite, not just check
+that one is configured. aipreflight does not implement evals. It runs whatever
+eval command you already have (pytest, promptfoo, ragas, a custom script), reads
+its JSON output, and turns it into one pass/fail gate:
+
+```yaml
+evals:
+  command: "python evals/run_evals.py"   # emits JSON on stdout
+  results_file: evals/results.json       # optional: read this instead of stdout
+  min_pass_rate: 0.9                      # gate on overall pass rate
+  metrics:                                # optional per-metric gates
+    retrieval_precision: {min: 0.8}
+    hallucination_rate: {max: 0.05}
+```
+
+The eval step must emit JSON with `total`/`passed` (or `pass_rate`) and an
+optional `metrics` map. The eval command's own exit code does not decide the
+gate; the reported numbers do. Without `min_pass_rate`/`metrics`, the check falls
+back to verifying an eval suite is configured and present (run it in CI).
 
 ```bash
 aipreflight check --profile profiles/app.yml
@@ -104,6 +133,9 @@ aipreflight check --profile profiles/inference.yml --probes fixtures/sample-prob
 
 # Check a hosted-API app instead (no llmprobe or GPU): cost, evals, observability, rollback
 aipreflight check --profile profiles/app.yml
+
+# Check a RAG app (no llmprobe or GPU): retrieval, answer quality, citations, hallucination
+aipreflight check --profile profiles/rag.yml
 
 # Find the concurrency breaking point
 ./scripts/sweep.sh configs/llmprobe/vllm.yml 1,2,4,8,16
@@ -256,14 +288,17 @@ aipreflight/                      # Python package (CLI + readiness logic)
   analyze.py                     # SLA gate logic (inference)
   appcheck.py                    # app readiness checks (cost/evals/observability/deploy)
   cost.py                        # tokentoll cost gate adapter
+  evals.py                       # eval quality gate adapter (pass rate + metrics)
   report.py                      # unified JSON + Markdown report
   diagnose.py                    # client + server + GPU correlation
   compare.py                     # sweep comparison table
 profiles/
   inference.yml                  # vLLM / OpenAI-compatible endpoint profile
   app.yml                        # hosted-API app profile (cost/evals/observability)
+  rag.yml                        # RAG profile (retrieval/answer quality gate)
 examples/
   hosted-api-app/                # runnable FastAPI app checked by profiles/app.yml
+  rag-app/                       # runnable offline RAG app checked by profiles/rag.yml
 thresholds.yml                    # legacy SLA contract (scripts/gate.sh)
 prometheus.example.yml            # Prometheus config template
 docker-compose.observability.yml  # Prometheus + Grafana + DCGM stack
@@ -311,8 +346,8 @@ reports/examples/               # Example outputs
 - [x] `aipreflight` CLI with profiles, exit-code contract, and unified JSON/MD report
 - [x] App profile with tokentoll cost gate, observability, and rollback checks
 - [x] Runnable hosted-API example app (FastAPI, offline-testable)
-- [ ] RAG profile (retrieval + answer quality readiness)
-- [ ] Eval/quality gate (run the eval suite, not just check it is configured)
+- [x] Eval/quality gate (run the eval suite and gate on pass rate + metrics)
+- [x] RAG profile and offline example (retrieval + answer quality readiness)
 
 ## License
 

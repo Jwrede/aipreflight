@@ -58,7 +58,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         _err(str(e))
         return EXIT_CONFIG
 
-    if profile["kind"] == "app":
+    if profile["kind"] in ("app", "rag"):
         return _check_app(args, profile)
     return _check_inference(args, profile)
 
