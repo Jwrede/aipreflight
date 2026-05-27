@@ -65,10 +65,16 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 def _emit(report: dict, artifacts: dict) -> int:
     print(f"Verdict: {report['verdict']}")
-    for v in report["failed_checks"]:
-        print(f"  FAIL: {v}")
-    for w in report["warnings"]:
-        print(f"  WARN: {w}")
+    checks = report.get("checks")
+    if checks:
+        width = max(len(c["name"]) for c in checks)
+        for c in checks:
+            print(f"  {c['name']:<{width}}  {c['status']:<4}  {c['summary']}")
+    else:
+        for v in report["failed_checks"]:
+            print(f"  FAIL: {v}")
+        for w in report["warnings"]:
+            print(f"  WARN: {w}")
     print(f"Report: {artifacts['markdown']}")
     return EXIT_FAIL if report["verdict"] == "FAIL" else EXIT_PASS
 
