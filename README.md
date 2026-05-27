@@ -282,7 +282,7 @@ Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cr
 ```
 aipreflight/                      # Python package (CLI + readiness logic)
   cli.py                         # `aipreflight` entrypoint (check/report/diagnose)
-  profile.py                     # profile loading + validation (inference | app)
+  profile.py                     # profile loading + validation (inference | app | rag)
   checks.py                      # generic CheckResult + verdict aggregation
   probes.py                      # llmprobe runner + JSONL loading
   analyze.py                     # SLA gate logic (inference)
