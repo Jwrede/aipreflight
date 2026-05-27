@@ -250,7 +250,7 @@ aipreflight
   - Why: old blog posts, resumes, and links may still mention the old name.
   - Done when: old readers understand they are in the right place.
 
-- [ ] Update generated media only after the README story is stable.
+- [x] Update generated media only after the README story is stable.
   - What: regenerate thumbnail, demo captions, and any screenshots that show the old name.
   - Why: visuals should not be polished before the product scope is settled.
   - Done when: `docs/thumbnail.png`, `demo/demo.gif`, and screenshots use `aipreflight`.
@@ -484,12 +484,12 @@ What we would add to smooth onboarding, and why it is deferred:
 
 ## Documentation
 
-- [ ] Rewrite README around the broader promise.
+- [x] Rewrite README around the broader promise.
   - What: lead with "production readiness checks for AI applications and LLM inference endpoints".
   - Why: the first paragraph must match the career positioning.
   - Done when: a hiring manager can understand the project without knowing vLLM.
 
-- [ ] Add "When to use this" section.
+- [x] Add "When to use this" section.
   - What: explain prototype-to-production situations:
     - before merging an AI feature
     - before routing traffic to a new model
@@ -498,12 +498,12 @@ What we would add to smooth onboarding, and why it is deferred:
   - Why: concrete use cases make the tool feel commercially relevant.
   - Done when: README shows practical trigger points.
 
-- [ ] Add "What this checks" section.
+- [x] Add "What this checks" section.
   - What: list evals, latency, cost, observability, deployment config, and runbooks.
   - Why: this maps directly to the positioning.
   - Done when: readers can connect the project to production AI reliability in under one minute.
 
-- [ ] Add "What this does not replace" section.
+- [x] Add "What this does not replace" section.
   - What: say it does not replace LiteLLM, Prometheus, Grafana, OpenTelemetry, promptfoo, Ragas, or Kubernetes.
   - Why: the product boundary must stay credible.
   - Done when: scope is clear and not overclaimed.

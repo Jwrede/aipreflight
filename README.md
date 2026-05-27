@@ -14,6 +14,17 @@ aipreflight brings the deployment discipline of CI gates, smoke tests, and SLO-b
 
 Server metrics say "healthy" while users experience 3-second TTFT. The load balancer is misconfigured, TLS adds overhead, the rate limiter is throttling, or the model is silently returning empty responses. Server-side metrics alone often miss this because they do not measure the full client path. You need an external validator.
 
+## When to use this
+
+Run `aipreflight check` at the same gates where classical software already runs CI checks, smoke tests, and canary analysis:
+
+- Before merging an AI feature, prompt change, or RAG change.
+- Before routing traffic to a new model or a new provider.
+- Before increasing a rollout percentage.
+- Before approving a customer pilot or a production launch.
+
+Each gate gives you one verdict and one exit code, so it drops into a pull request check, a deploy step, or a Kubernetes Job without a human in the loop.
+
 ## How it works
 
 ```
@@ -352,6 +363,17 @@ reports/examples/               # Example outputs
 - [x] Runnable hosted-API example app (FastAPI, offline-testable)
 - [x] Eval/quality gate (run the eval suite and gate on pass rate + metrics)
 - [x] RAG profile and offline example (retrieval + answer quality readiness)
+
+## What this does not replace
+
+aipreflight is a gate, not a platform. It runs the checks you point it at and turns them into one verdict. It does not replace the tools that produce the underlying signals:
+
+- It does not replace your LLM router or proxy (LiteLLM).
+- It does not replace your metrics stack (Prometheus, Grafana, OpenTelemetry). It reads from Prometheus during `diagnose`.
+- It does not replace your eval framework (promptfoo, Ragas, pytest). It runs whatever eval command you already have and gates on its results.
+- It does not replace your orchestrator (Kubernetes). It runs as a Job or a CI step inside it.
+
+The gap it fills is the preflight verdict: deciding, in one command, whether quality, cost, latency, observability, and rollback readiness are good enough to ship.
 
 ## License
 
