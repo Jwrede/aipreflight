@@ -18,7 +18,7 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
       - GF_RENDERING_SERVER_URL=http://renderer:8081/render
       - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
-      - GF_RENDERING_RENDERER_TOKEN=readiness-kit-token
+      - GF_RENDERING_RENDERER_TOKEN=aipreflight-token
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboard.json:/var/lib/grafana/dashboards/vllm-readiness.json:ro
@@ -30,7 +30,7 @@ services:
     image: grafana/grafana-image-renderer:latest
     environment:
       - ENABLE_METRICS=true
-      - AUTH_TOKEN=readiness-kit-token
+      - AUTH_TOKEN=aipreflight-token
 
   # GPU metrics (requires NVIDIA GPU and nvidia-container-toolkit)
   # Uncomment on GPU nodes:

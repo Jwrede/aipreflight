@@ -8,6 +8,3 @@ prometheus.yml
 build/
 dist/
 .pytest_cache/
-
-todo.md
-NEW_STORY.md

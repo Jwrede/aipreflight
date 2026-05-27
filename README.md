@@ -6,7 +6,7 @@ SRE-style preflight checks for AI applications. One command, one readiness repor
 
 aipreflight brings the deployment discipline of CI gates, smoke tests, and SLO-based rollouts to LLM apps, RAG systems, and inference endpoints. It turns external acceptance testing ([llmprobe](https://github.com/Jwrede/llmprobe)) and internal server telemetry (Prometheus) into an automated go/no-go decision before traffic is routed.
 
-> Formerly `inference-readiness-kit`. The project keeps its strongest proof, SLA gating for self-hosted inference, and has broadened into a general production readiness gate for AI applications. It now ships three profiles: `inference` (SLA gating), `app` (cost, evals, observability, rollback for hosted-API apps), and `rag` (retrieval and answer quality). See [TODO.md](TODO.md) for the implementation plan.
+> The project's strongest proof is SLA gating for self-hosted inference, and it has broadened into a general production readiness gate for AI applications. It ships three profiles: `inference` (SLA gating), `app` (cost, evals, observability, rollback for hosted-API apps), and `rag` (retrieval and answer quality).
 
 ![demo](demo/demo.gif)
 
@@ -360,23 +360,23 @@ reports/examples/               # Example outputs
 .github/workflows/ci.yml       # CI (pytest + shellcheck)
 ```
 
-## Roadmap
+## What's built
 
-- [x] Readiness gate with SLA thresholds
-- [x] Diagnosis framework (client-only and with Prometheus)
-- [x] Concurrency sweep with comparison
-- [x] Real vLLM CPU experiment with published results
-- [x] Cross-engine comparison (vLLM vs Ollama)
-- [x] Prometheus-based server-side correlation with live data
-- [x] Runbooks for common failure modes
-- [x] Kubernetes manifests with GPU scheduling
-- [x] NVIDIA DCGM GPU metrics in Prometheus/Grafana
-- [x] `aipreflight` CLI with profiles, exit-code contract, and unified JSON/MD report
-- [x] App profile with tokentoll cost gate, observability, and rollback checks
-- [x] Runnable hosted-API example app (FastAPI, offline-testable)
-- [x] Eval/quality gate (run the eval suite and gate on pass rate + metrics)
-- [x] RAG profile and offline example (retrieval + answer quality readiness)
-- [x] No-Go install script and `aipreflight doctor` environment check
+- Readiness gate with SLA thresholds
+- Diagnosis framework (client-only and with Prometheus)
+- Concurrency sweep with comparison
+- Real vLLM CPU experiment with published results
+- Cross-engine comparison (vLLM vs Ollama)
+- Prometheus-based server-side correlation with live data
+- Runbooks for common failure modes
+- Kubernetes manifests with GPU scheduling
+- NVIDIA DCGM GPU metrics in Prometheus/Grafana
+- `aipreflight` CLI with profiles, exit-code contract, and unified JSON/MD report
+- App profile with tokentoll cost gate, observability, and rollback checks
+- Runnable hosted-API example app (FastAPI, offline-testable)
+- Eval/quality gate (run the eval suite and gate on pass rate + metrics)
+- RAG profile and offline example (retrieval + answer quality readiness)
+- No-Go install script and `aipreflight doctor` environment check
 
 ## What this does not replace
 
