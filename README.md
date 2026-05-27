@@ -22,6 +22,10 @@ Prometheus (internal) -->  WHY is there a problem?  (server-side explanation)
 aipreflight           -->  WHAT to do about it      (automated verdict)
 ```
 
+See [docs/architecture.md](docs/architecture.md) for the full flow: how a profile,
+the external signals, and the per-check verdict aggregation produce one report and
+one exit code.
+
 ## Three workflows
 
 ### 1. Gate (CI/CD)

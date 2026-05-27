@@ -575,10 +575,16 @@ Why: quality gates are the biggest missing piece in the current project.
 
 ### Phase 5: Polish as flagship proof
 
-- [ ] Regenerate demo and thumbnail.
-- [ ] Write a flagship blog post.
+- [x] Regenerate demo and thumbnail. (demo.gif re-recorded from real offline
+      commands: app -> PASS, then AIPREFLIGHT_RAG_BROKEN=1 rag -> FAIL.
+      docs/thumbnail.png rebuilt for the aipreflight name and the three-profile
+      story. Note: vhs/rod's Chromium needed --no-sandbox in this container; the
+      cached binary at ~/.cache/rod/.../chrome was wrapped to inject it.)
+- [x] Write a flagship blog post. (scripts/marketing/blog_post.md: keeps the TTFT
+      data hook, updated to the aipreflight CLI, adds the app/rag preflight story.)
 - [ ] Update website and CV project descriptions.
-- [ ] Add a short architecture diagram.
+- [x] Add a short architecture diagram. (docs/architecture.md, Mermaid; linked from
+      README "How it works".)
 
 Why: the project should clearly prove the AI Platform & Reliability positioning.
 
