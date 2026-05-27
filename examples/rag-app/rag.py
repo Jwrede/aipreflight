@@ -1,10 +1,14 @@
-"""A tiny, fully offline RAG pipeline used to demonstrate aipreflight's rag profile.
+"""A tiny RAG pipeline used to demonstrate aipreflight's rag profile.
 
-There is no LLM and no network. Retrieval is keyword-overlap scoring over a small
-in-memory corpus; answering is templated from the retrieved text and cites the
-source document id. When nothing matches, the answerer abstains instead of making
-something up. That makes two RAG failure modes observable without a real model:
-empty-retrieval handling and hallucination on unanswerable questions.
+Retrieval is keyword-overlap scoring over a small in-memory corpus. The generation
+step calls an LLM to answer from the retrieved context and cites the source
+document id. The real OpenAI call site stays in source so the cost gate (tokentoll)
+can find and price the generation step. By default it runs offline: set
+AIPREFLIGHT_FAKE_LLM=1, or simply run without OPENAI_API_KEY, and generation
+returns the retrieved context verbatim, deterministic and with no network. When
+nothing matches, the answerer abstains instead of making something up. That makes
+two RAG failure modes observable without a real model: empty-retrieval handling
+and hallucination on unanswerable questions.
 
 Set AIPREFLIGHT_RAG_BROKEN=1 to simulate a retrieval regression (the retriever
 returns an unrelated document). Answer quality and retrieval precision then drop,
@@ -16,6 +20,10 @@ import os
 import re
 
 ABSTAIN = "I do not have enough information to answer that."
+
+MODEL = "gpt-4o-mini"
+PROVIDER = "openai"
+PROMPT_VERSION = "v1"
 
 CORPUS = [
     {"id": "doc-geo-1", "title": "France", "text": "The capital of France is Paris."},
@@ -51,14 +59,43 @@ def retrieve(query: str, top_k: int = 2) -> list[dict]:
     return [doc for _, doc in scored[:top_k]]
 
 
+def _fake_enabled() -> bool:
+    return os.environ.get("AIPREFLIGHT_FAKE_LLM") == "1" or not os.environ.get("OPENAI_API_KEY")
+
+
+def generate(query: str, context: str) -> str:
+    """Generate an answer from retrieved context.
+
+    Offline by default (returns the context verbatim, deterministic). The real
+    OpenAI call site below stays in source so tokentoll can price the RAG
+    generation step; set OPENAI_API_KEY to use it.
+    """
+    if _fake_enabled():
+        return context
+
+    from openai import OpenAI
+
+    client = OpenAI()
+    resp = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": "Answer using only the provided context. Cite the source id in brackets."},
+            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"},
+        ],
+        max_tokens=256,
+    )
+    return resp.choices[0].message.content
+
+
 def answer(query: str) -> dict:
     """Answer a query from retrieved context. Returns {answer, citations, retrieved}."""
     docs = retrieve(query)
     if not docs:
         return {"answer": ABSTAIN, "citations": [], "retrieved": []}
     top = docs[0]
+    context = f"{top['text']} [{top['id']}]"
     return {
-        "answer": f"{top['text']} [{top['id']}]",
+        "answer": generate(query, context),
         "citations": [top["id"]],
         "retrieved": [d["id"] for d in docs],
     }

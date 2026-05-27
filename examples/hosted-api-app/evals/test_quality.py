@@ -1,8 +1,8 @@
 """Answer-quality evals for the hosted-API app.
 
 Deterministic and offline: forces fake-LLM mode so it runs in CI with no API key.
-aipreflight's app profile checks that this suite is configured; Phase 4 wires it
-into a quality gate.
+This is the pytest form of the suite; run_evals.py emits the same cases as the
+JSON that aipreflight's app profile gates on (pass rate and answer quality).
 """
 
 import os

@@ -80,7 +80,7 @@ runs the right checks and aggregates them into one verdict (PASS / WARN / FAIL).
 |---------|------|-------|--------|
 | `profiles/inference.yml` | `inference` | llmprobe (+ optional Prometheus) | TTFT, latency, throughput, error rate vs SLA |
 | `profiles/app.yml` | `app` | nothing self-hosted | cost budget (tokentoll), eval quality gate, observability fields, rollback runbook |
-| `profiles/rag.yml` | `rag` | nothing self-hosted | retrieval precision, answer quality, citation rate, hallucination rate, empty-retrieval handling, observability, rollback |
+| `profiles/rag.yml` | `rag` | nothing self-hosted | cost budget (tokentoll), retrieval precision, answer quality, citation rate, hallucination rate, empty-retrieval handling, observability, rollback |
 
 The `app` profile is for teams calling hosted APIs that still need production
 discipline: a cost gate, a quality eval suite, debuggable telemetry, and a
@@ -119,10 +119,13 @@ back to verifying an eval suite is configured and present (run it in CI).
 aipreflight check --profile profiles/app.yml
 # Verdict: PASS
 # cost          PASS   $7.69/mo across 1 call site(s), within budget
-# evals         PASS   eval suite configured
+# evals         PASS   quality gate passed: pass rate 100% (min 90%), answer_quality=1.00
 # observability PASS   telemetry config present with all 9 required fields
-# deployment    PASS   rollback runbook present
+# deployment    PASS   rollback runbook present: runbooks/rollback.md
 ```
+
+Both shipped example profiles gate on real eval numbers: `app.yml` on answer
+quality, `rag.yml` on retrieval precision, citations, and hallucination rate.
 
 The cost gate uses [tokentoll](https://github.com/Jwrede/tokentoll) to statically
 price the LLM call sites in your source and fail if per-request or monthly cost

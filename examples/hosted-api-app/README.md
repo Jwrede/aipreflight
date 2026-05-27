@@ -18,8 +18,9 @@ Set `OPENAI_API_KEY` (and unset `AIPREFLIGHT_FAKE_LLM`) to call the real API.
 ## Tests and evals (offline, deterministic)
 
 ```bash
-pytest tests        # smoke tests via FastAPI TestClient
-pytest evals        # answer-quality evals
+pytest tests                       # smoke tests via FastAPI TestClient
+pytest evals                       # answer-quality evals as a pytest run
+python evals/run_evals.py          # same evals, emitting the JSON aipreflight gates on
 ```
 
 ## Check readiness
@@ -31,5 +32,5 @@ aipreflight check --profile profiles/app.yml
 ```
 
 This runs the cost gate (tokentoll scans the call site in `llm.py`), verifies the
-telemetry contract in `observability.yml`, confirms the eval suite is configured,
-and checks the rollback runbook exists.
+telemetry contract in `observability.yml`, runs the eval suite and gates on its
+answer-quality pass rate, and checks the rollback runbook exists.

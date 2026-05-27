@@ -16,8 +16,10 @@ cost:
   max_monthly_cost_usd: 1000
 
 evals:
-  command: "pytest -q examples/hosted-api-app/evals"
-  path: examples/hosted-api-app/evals
+  command: "python examples/hosted-api-app/evals/run_evals.py"
+  min_pass_rate: 0.9
+  metrics:
+    answer_quality: {min: 0.9}
 
 observability:
   config: examples/hosted-api-app/observability.yml

@@ -16,6 +16,12 @@ name: rag
 kind: rag
 description: Production readiness for a retrieval-augmented generation app
 
+cost:
+  scan_paths: [examples/rag-app]
+  calls_per_month: 50000
+  max_cost_per_request_usd: 0.02
+  max_monthly_cost_usd: 1000
+
 evals:
   command: "python examples/rag-app/evals/run_evals.py"
   min_pass_rate: 0.9
