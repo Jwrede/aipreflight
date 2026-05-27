@@ -78,3 +78,66 @@ class TestArtifacts:
         code = main(["report", str(out)])
         assert code == EXIT_PASS
         assert "aipreflight: PASS" in capsys.readouterr().out
+
+
+def write_app_profile(tmp_path, body: str) -> str:
+    p = tmp_path / "app.yml"
+    p.write_text(body)
+    return str(p)
+
+
+class TestAppCheck:
+    """App-profile checks without cost, so no tokentoll dependency is needed."""
+
+    def _profile(self, tmp_path, runbook_exists=True):
+        obs = tmp_path / "obs.yml"
+        obs.write_text("fields: [request_id, model]\n")
+        rb = tmp_path / "rb.md"
+        if runbook_exists:
+            rb.write_text("# rollback\n")
+        return write_app_profile(tmp_path, f"""
+name: app
+kind: app
+observability:
+  config: {obs}
+  required_fields: [request_id, model]
+deployment:
+  rollback_runbook: {rb}
+""")
+
+    def test_pass(self, tmp_path):
+        prof = self._profile(tmp_path)
+        out = tmp_path / "run"
+        code = main(["check", "--profile", prof, "--out", str(out)])
+        assert code == EXIT_PASS
+        report = json.loads((out / "aipreflight-report.json").read_text())
+        assert report["kind"] == "app"
+        assert report["verdict"] == "PASS"
+        assert {c["name"] for c in report["checks"]} == {"cost", "evals", "observability", "deployment"}
+
+    def test_fail_on_missing_runbook(self, tmp_path):
+        prof = self._profile(tmp_path, runbook_exists=False)
+        out = tmp_path / "run"
+        code = main(["check", "--profile", prof, "--out", str(out)])
+        assert code == EXIT_FAIL
+        report = json.loads((out / "aipreflight-report.json").read_text())
+        assert report["verdict"] == "FAIL"
+
+    def test_markdown_is_checks_based(self, tmp_path):
+        prof = self._profile(tmp_path)
+        out = tmp_path / "run"
+        main(["check", "--profile", prof, "--out", str(out)])
+        md = (out / "aipreflight-report.md").read_text()
+        assert "| Check | Status | Summary |" in md
+
+    def test_missing_tokentoll_is_config_error(self, tmp_path, monkeypatch):
+        from aipreflight import cost
+        monkeypatch.setattr(cost.shutil, "which", lambda _: None)
+        prof = write_app_profile(tmp_path, """
+name: app
+kind: app
+cost:
+  scan_paths: [examples/hosted-api-app]
+""")
+        code = main(["check", "--profile", prof, "--out", str(tmp_path / "run")])
+        assert code == EXIT_CONFIG

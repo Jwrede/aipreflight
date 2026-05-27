@@ -1,0 +1,4 @@
+fastapi>=0.110
+httpx>=0.27
+uvicorn>=0.29
+# openai>=1.0   # only needed to call the real API (unset AIPREFLIGHT_FAKE_LLM)

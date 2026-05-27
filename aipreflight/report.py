@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from aipreflight.analyze import analyze, check_gate, verdict_from_analysis
+from aipreflight.checks import FAIL, WARN, CheckResult, aggregate_verdict
 from aipreflight.metrics import format_ms, percentile
 
 
@@ -55,6 +56,7 @@ def build_report(
     return {
         "verdict": verdict,
         "profile": profile["name"],
+        "kind": profile.get("kind", "inference"),
         "generated": datetime.now(timezone.utc).isoformat(),
         "source": source_path,
         "failed_checks": failed,
@@ -65,8 +67,62 @@ def build_report(
     }
 
 
+def build_app_report(results: list[CheckResult], profile: dict, artifacts: dict | None = None) -> dict:
+    """Build the readiness report dict for an app-kind profile."""
+    return {
+        "verdict": aggregate_verdict(results),
+        "profile": profile["name"],
+        "kind": "app",
+        "generated": datetime.now(timezone.utc).isoformat(),
+        "checks": [r.to_dict() for r in results],
+        "failed_checks": [r.summary for r in results if r.status == FAIL],
+        "warnings": [r.summary for r in results if r.status == WARN],
+        "artifacts": artifacts or {},
+    }
+
+
+def _render_app_markdown(report: dict) -> str:
+    lines = []
+    lines.append(f"# aipreflight: {report['verdict']}")
+    lines.append("")
+    lines.append(f"Profile: `{report['profile']}` (kind: app)")
+    lines.append(f"Generated: {report['generated']}")
+    lines.append("")
+    lines.append("## Checks")
+    lines.append("")
+    lines.append("| Check | Status | Summary |")
+    lines.append("|-------|--------|---------|")
+    for c in report["checks"]:
+        lines.append(f"| {c['name']} | {c['status']} | {c['summary']} |")
+    lines.append("")
+    if report["failed_checks"]:
+        lines.append("## Failed checks")
+        lines.append("")
+        for v in report["failed_checks"]:
+            lines.append(f"- {v}")
+        lines.append("")
+    if report["warnings"]:
+        lines.append("## Warnings")
+        lines.append("")
+        for w in report["warnings"]:
+            lines.append(f"- {w}")
+        lines.append("")
+    lines.append("## Recommended action")
+    lines.append("")
+    if report["verdict"] == "PASS":
+        lines.append("- Safe to ship. All configured readiness checks pass.")
+    elif report["verdict"] == "WARN":
+        lines.append("- Acceptable to ship, but resolve the warnings above soon.")
+    else:
+        lines.append("- Do not ship. Resolve the failed checks above first.")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def render_markdown(report: dict) -> str:
     """Render the unified report dict as Markdown, verdict first."""
+    if "checks" in report:
+        return _render_app_markdown(report)
     m = report["metrics"]
     sla = report["thresholds"].get("sla", {})
     lines = []

@@ -58,6 +58,46 @@ def cmd_check(args: argparse.Namespace) -> int:
         _err(str(e))
         return EXIT_CONFIG
 
+    if profile["kind"] == "app":
+        return _check_app(args, profile)
+    return _check_inference(args, profile)
+
+
+def _emit(report: dict, artifacts: dict) -> int:
+    print(f"Verdict: {report['verdict']}")
+    for v in report["failed_checks"]:
+        print(f"  FAIL: {v}")
+    for w in report["warnings"]:
+        print(f"  WARN: {w}")
+    print(f"Report: {artifacts['markdown']}")
+    return EXIT_FAIL if report["verdict"] == "FAIL" else EXIT_PASS
+
+
+def _check_app(args: argparse.Namespace, profile: dict) -> int:
+    from aipreflight.appcheck import run_app_checks
+
+    run_dir = _run_dir(profile, args.out)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        results = run_app_checks(profile)
+    except MissingDependency as e:
+        _err(str(e))
+        return EXIT_CONFIG
+    except RuntimeError as e:
+        _err(str(e))
+        return EXIT_PROBE
+
+    artifacts = {
+        "json": str(run_dir / "aipreflight-report.json"),
+        "markdown": str(run_dir / "aipreflight-report.md"),
+    }
+    report = report_mod.build_app_report(results, profile, artifacts)
+    report_mod.write_reports(report, run_dir)
+    _update_latest(run_dir)
+    return _emit(report, artifacts)
+
+
+def _check_inference(args: argparse.Namespace, profile: dict) -> int:
     if args.config:
         profile["probe"]["config"] = args.config
     if args.duration:
@@ -101,15 +141,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     report = report_mod.build_report(probes, profile, probes_path, artifacts)
     report_mod.write_reports(report, run_dir)
     _update_latest(run_dir)
-
-    print(f"Verdict: {report['verdict']}")
-    for v in report["failed_checks"]:
-        print(f"  FAIL: {v}")
-    for w in report["warnings"]:
-        print(f"  WARN: {w}")
-    print(f"Report: {artifacts['markdown']}")
-
-    return EXIT_FAIL if report["verdict"] == "FAIL" else EXIT_PASS
+    return _emit(report, artifacts)
 
 
 def _resolve_jsonl(path: str) -> str:

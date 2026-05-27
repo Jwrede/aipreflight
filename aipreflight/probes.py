@@ -5,13 +5,13 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from aipreflight.errors import MissingDependency
+
+__all__ = ["ProbeError", "MissingDependency", "load_probes", "run_llmprobe"]
+
 
 class ProbeError(Exception):
     """Raised when a probe run fails to execute or produce data."""
-
-
-class MissingDependency(ProbeError):
-    """Raised when a required external tool (e.g. llmprobe) is not installed."""
 
 
 def load_probes(path: str) -> list[dict]:

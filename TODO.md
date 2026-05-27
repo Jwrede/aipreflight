@@ -291,7 +291,7 @@ aipreflight
   - Why: this preserves the current strongest proof: latency, TTFT, throughput, errors, and Prometheus diagnosis.
   - Done when: it can reproduce the current gate behavior.
 
-- [ ] Add `profiles/app.yml`.
+- [x] Add `profiles/app.yml`.
   - What: generic AI application readiness checks for teams using hosted APIs.
   - Why: this makes the project relevant to companies that do not run their own inference infrastructure.
   - Checks:
@@ -332,7 +332,7 @@ aipreflight
   - Why: the flagship should not break whenever `llmprobe` output evolves.
   - Done when: tests load fixture JSONL and validate parsing.
 
-- [ ] Keep `llmprobe` optional outside inference profiles.
+- [x] Keep `llmprobe` optional outside inference profiles.
   - What: `profiles/app.yml` should not require `llmprobe` unless endpoint probing is configured.
   - Why: hosted-API teams may start with app-level smoke tests and evals.
   - Done when: app profile works without a local `llmprobe` install.
@@ -384,12 +384,12 @@ What we would add to smooth onboarding, and why it is deferred:
 
 ## tokentoll integration
 
-- [ ] Treat `tokentoll` as the cost gate adapter.
+- [x] Treat `tokentoll` as the cost gate adapter.
   - What: call `tokentoll` to estimate token cost for prompts, eval datasets, or representative usage scenarios.
   - Why: cost control is a clear business pain and differentiates the project from generic monitoring.
   - Done when: readiness can fail because expected monthly or per-request cost exceeds the configured budget.
 
-- [ ] Add cost budget fields to profiles.
+- [x] Add cost budget fields to profiles.
   - What:
 
     ```yaml
@@ -402,7 +402,7 @@ What we would add to smooth onboarding, and why it is deferred:
   - Why: cost needs an explicit business threshold, not only raw token counts.
   - Done when: report shows estimated cost, budget, and pass/fail reason.
 
-- [ ] Keep cost estimates explainable.
+- [x] Keep cost estimates explainable.
   - What: report model, input tokens, output tokens, request volume, and pricing assumption.
   - Why: people will not trust a cost verdict if they cannot see where it came from.
   - Done when: report includes the cost calculation inputs.
@@ -426,17 +426,17 @@ What we would add to smooth onboarding, and why it is deferred:
 
 ## Observability checks
 
-- [ ] Keep Prometheus support for inference diagnosis.
+- [x] Keep Prometheus support for inference diagnosis.
   - What: preserve current queue, KV cache, GPU, and server-side latency diagnosis.
   - Why: this is already a strong differentiator and should not be diluted.
   - Done when: existing diagnose tests still pass after the rename.
 
-- [ ] Add generic OpenTelemetry readiness checks.
+- [x] Add generic OpenTelemetry readiness checks.
   - What: verify that traces/logs/metrics are configured or that required environment variables/endpoints exist.
   - Why: hosted-API applications still need observability even if they do not expose vLLM metrics.
   - Done when: app profile can report missing telemetry config as a readiness warning or failure.
 
-- [ ] Define required AI observability fields.
+- [x] Define required AI observability fields.
   - What: recommend fields such as request ID, user/team, model, provider, prompt version, token counts, latency, cost, eval version, and error type.
   - Why: teams need debugging and cost attribution after launch.
   - Done when: README has a short observability contract and the app profile can check for it.
@@ -460,7 +460,7 @@ What we would add to smooth onboarding, and why it is deferred:
 
 ## Example projects
 
-- [ ] Add a small API-backed AI app example.
+- [x] Add a small API-backed AI app example.
   - What: a minimal service that calls an LLM API and has smoke tests, evals, cost budget, and telemetry config.
   - Why: this proves `aipreflight` is not only for self-hosted inference.
   - Done when: `profiles/app.yml` can check it end to end.
@@ -546,12 +546,12 @@ Why: establish the new public identity without risking the working inference fun
 
 Why: turn the current scripts into a product-shaped tool.
 
-### Phase 3: Add app and cost readiness
+### Phase 3: Add app and cost readiness (DONE)
 
-- [ ] Add `profiles/app.yml`.
-- [ ] Add optional `tokentoll` cost gate.
-- [ ] Add a hosted-API example app.
-- [ ] Document app-level readiness checks.
+- [x] Add `profiles/app.yml`.
+- [x] Add optional `tokentoll` cost gate.
+- [x] Add a hosted-API example app.
+- [x] Document app-level readiness checks.
 
 Why: broaden the project beyond teams that host their own inference.
 

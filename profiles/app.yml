@@ -1,0 +1,36 @@
+# App readiness profile for a hosted-API AI application.
+# Needs no llmprobe or GPU. Checks cost, evals, observability, and rollback
+# readiness against the example app in examples/hosted-api-app.
+#
+# Run with:
+#   aipreflight check --profile profiles/app.yml
+
+name: app
+kind: app
+description: Production readiness for a hosted-API AI application
+
+cost:
+  scan_paths: [examples/hosted-api-app]
+  calls_per_month: 50000
+  max_cost_per_request_usd: 0.02
+  max_monthly_cost_usd: 1000
+
+evals:
+  command: "pytest -q examples/hosted-api-app/evals"
+  path: examples/hosted-api-app/evals
+
+observability:
+  config: examples/hosted-api-app/observability.yml
+  required_fields:
+    - request_id
+    - model
+    - provider
+    - prompt_version
+    - input_tokens
+    - output_tokens
+    - latency_ms
+    - cost_usd
+    - error_type
+
+deployment:
+  rollback_runbook: runbooks/rollback.md

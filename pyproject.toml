@@ -13,7 +13,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "tokentoll>=0.6"]
+example = ["fastapi>=0.110", "httpx>=0.27", "uvicorn>=0.29"]
 
 [project.scripts]
 aipreflight = "aipreflight.cli:main"

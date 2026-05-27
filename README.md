@@ -56,9 +56,37 @@ Find the concurrency level where your endpoint breaks its SLA.
 
 Produces a comparison table showing how TTFT, latency, and throughput degrade under load. Tells you exactly how many concurrent users your config supports within SLA.
 
+## Profiles: inference and app
+
+A profile defines what "ready" means for one kind of target. `aipreflight check`
+runs the right checks and aggregates them into one verdict (PASS / WARN / FAIL).
+
+| Profile | Kind | Needs | Checks |
+|---------|------|-------|--------|
+| `profiles/inference.yml` | `inference` | llmprobe (+ optional Prometheus) | TTFT, latency, throughput, error rate vs SLA |
+| `profiles/app.yml` | `app` | nothing self-hosted | cost budget (tokentoll), eval suite present, observability fields, rollback runbook |
+
+The `app` profile is for teams calling hosted APIs that still need production
+discipline: a cost gate, a quality eval suite, debuggable telemetry, and a
+rollback path. It runs with no GPU and no probe. See
+[examples/hosted-api-app](examples/hosted-api-app) for a runnable target.
+
+```bash
+aipreflight check --profile profiles/app.yml
+# Verdict: PASS
+# cost          PASS   $7.69/mo across 1 call site(s), within budget
+# evals         PASS   eval suite configured
+# observability PASS   telemetry config present with all 9 required fields
+# deployment    PASS   rollback runbook present
+```
+
+The cost gate uses [tokentoll](https://github.com/Jwrede/tokentoll) to statically
+price the LLM call sites in your source and fail if per-request or monthly cost
+exceeds the budget in the profile.
+
 ## Quick start
 
-Prerequisites: [llmprobe](https://github.com/Jwrede/llmprobe) v1.4.0+, Python 3.10+.
+Prerequisites: [llmprobe](https://github.com/Jwrede/llmprobe) v1.4.0+, Python 3.10+. The app profile additionally uses [tokentoll](https://github.com/Jwrede/tokentoll) (`pip install tokentoll`).
 
 ```bash
 go install github.com/Jwrede/llmprobe@latest
@@ -73,6 +101,9 @@ aipreflight check --profile profiles/inference.yml
 
 # Score an existing probe run offline (no endpoint or GPU needed)
 aipreflight check --profile profiles/inference.yml --probes fixtures/sample-probes.jsonl
+
+# Check a hosted-API app instead (no llmprobe or GPU): cost, evals, observability, rollback
+aipreflight check --profile profiles/app.yml
 
 # Find the concurrency breaking point
 ./scripts/sweep.sh configs/llmprobe/vllm.yml 1,2,4,8,16
@@ -219,14 +250,20 @@ Full analysis: [reports/examples/cross-engine-comparison.md](reports/examples/cr
 ```
 aipreflight/                      # Python package (CLI + readiness logic)
   cli.py                         # `aipreflight` entrypoint (check/report/diagnose)
-  profile.py                     # profile loading + validation
+  profile.py                     # profile loading + validation (inference | app)
+  checks.py                      # generic CheckResult + verdict aggregation
   probes.py                      # llmprobe runner + JSONL loading
-  analyze.py                     # SLA gate logic
+  analyze.py                     # SLA gate logic (inference)
+  appcheck.py                    # app readiness checks (cost/evals/observability/deploy)
+  cost.py                        # tokentoll cost gate adapter
   report.py                      # unified JSON + Markdown report
   diagnose.py                    # client + server + GPU correlation
   compare.py                     # sweep comparison table
 profiles/
   inference.yml                  # vLLM / OpenAI-compatible endpoint profile
+  app.yml                        # hosted-API app profile (cost/evals/observability)
+examples/
+  hosted-api-app/                # runnable FastAPI app checked by profiles/app.yml
 thresholds.yml                    # legacy SLA contract (scripts/gate.sh)
 prometheus.example.yml            # Prometheus config template
 docker-compose.observability.yml  # Prometheus + Grafana + DCGM stack
@@ -255,7 +292,7 @@ docs/
   runpod-gpu-setup.md           # GPU benchmark reproducibility guide
 fixtures/                       # Test data
 tests/                          # pytest suite
-runbooks/                       # Failure mode runbooks
+runbooks/                       # Failure mode runbooks + rollback.md (app deployment check)
 reports/examples/               # Example outputs
 .github/workflows/ci.yml       # CI (pytest + shellcheck)
 ```
@@ -272,8 +309,10 @@ reports/examples/               # Example outputs
 - [x] Kubernetes manifests with GPU scheduling
 - [x] NVIDIA DCGM GPU metrics in Prometheus/Grafana
 - [x] `aipreflight` CLI with profiles, exit-code contract, and unified JSON/MD report
-- [ ] App and RAG profiles (hosted-API and retrieval readiness)
-- [ ] Cost budget gate and eval/quality gate
+- [x] App profile with tokentoll cost gate, observability, and rollback checks
+- [x] Runnable hosted-API example app (FastAPI, offline-testable)
+- [ ] RAG profile (retrieval + answer quality readiness)
+- [ ] Eval/quality gate (run the eval suite, not just check it is configured)
 
 ## License
 

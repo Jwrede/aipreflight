@@ -40,27 +40,47 @@ def _require(cond: bool, msg: str) -> None:
         raise ProfileError(msg)
 
 
+VALID_KINDS = ("inference", "app")
+
+
 def _validate(raw: dict, path: str) -> dict:
     _require(
         isinstance(raw.get("name"), str) and raw["name"].strip(),
         f"Profile {path}: missing required field 'name' (a short profile name).",
     )
-
-    probe = raw.get("probe")
+    kind = raw.get("kind", "inference")
     _require(
-        isinstance(probe, dict),
-        f"Profile {path}: missing required 'probe' section.",
+        kind in VALID_KINDS,
+        f"Profile {path}: 'kind' must be one of {VALID_KINDS}, got '{kind}'.",
     )
+
+    report = raw.get("report") or {}
+    _require(
+        isinstance(report, dict),
+        f"Profile {path}: 'report' must be a mapping if present.",
+    )
+    common = {
+        "name": raw["name"],
+        "kind": kind,
+        "description": raw.get("description", ""),
+        "report": {"outdir": report.get("outdir", "runs")},
+    }
+
+    if kind == "inference":
+        return {**common, **_validate_inference(raw, path)}
+    return {**common, **_validate_app(raw, path)}
+
+
+def _validate_inference(raw: dict, path: str) -> dict:
+    probe = raw.get("probe")
+    _require(isinstance(probe, dict), f"Profile {path}: missing required 'probe' section.")
     _require(
         isinstance(probe.get("config"), str) and probe["config"].strip(),
         f"Profile {path}: 'probe.config' is required (path to the llmprobe config).",
     )
 
     thresholds = raw.get("thresholds")
-    _require(
-        isinstance(thresholds, dict),
-        f"Profile {path}: missing required 'thresholds' section.",
-    )
+    _require(isinstance(thresholds, dict), f"Profile {path}: missing required 'thresholds' section.")
     sla = thresholds.get("sla")
     _require(
         isinstance(sla, dict) and sla,
@@ -68,34 +88,43 @@ def _validate(raw: dict, path: str) -> dict:
     )
 
     observability = raw.get("observability") or {}
-    _require(
-        isinstance(observability, dict),
-        f"Profile {path}: 'observability' must be a mapping if present.",
-    )
-    report = raw.get("report") or {}
-    _require(
-        isinstance(report, dict),
-        f"Profile {path}: 'report' must be a mapping if present.",
-    )
+    _require(isinstance(observability, dict), f"Profile {path}: 'observability' must be a mapping if present.")
 
     return {
-        "name": raw["name"],
-        "description": raw.get("description", ""),
         "probe": {
             "tool": probe.get("tool", "llmprobe"),
             "config": probe["config"],
             "duration": str(probe.get("duration", "30s")),
             "interval": str(probe.get("interval", "5s")),
         },
-        "thresholds": {
-            "sla": sla,
-            "gate": thresholds.get("gate", {}),
-        },
+        "thresholds": {"sla": sla, "gate": thresholds.get("gate", {})},
         "observability": {
             "prometheus": observability.get("prometheus"),
             "queries": observability.get("queries", "configs/prometheus/queries.yml"),
         },
-        "report": {
-            "outdir": report.get("outdir", "runs"),
-        },
+    }
+
+
+def _validate_app(raw: dict, path: str) -> dict:
+    sections = ("cost", "evals", "observability", "deployment")
+    present = {s: raw.get(s) for s in sections if raw.get(s) is not None}
+    _require(
+        present,
+        f"Profile {path}: an app profile must define at least one of {sections}.",
+    )
+    for name, value in present.items():
+        _require(isinstance(value, dict), f"Profile {path}: '{name}' must be a mapping.")
+
+    cost = present.get("cost")
+    if cost is not None:
+        _require(
+            isinstance(cost.get("scan_paths"), list) and cost["scan_paths"],
+            f"Profile {path}: 'cost.scan_paths' is required and must be a non-empty list.",
+        )
+
+    return {
+        "cost": cost,
+        "evals": present.get("evals"),
+        "observability": present.get("observability"),
+        "deployment": present.get("deployment"),
     }

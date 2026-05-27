@@ -35,11 +35,49 @@ class TestValidProfile:
 
     def test_defaults_applied(self, tmp_path):
         prof = load_profile(write_profile(tmp_path, VALID))
+        assert prof["kind"] == "inference"
         assert prof["probe"]["tool"] == "llmprobe"
         assert prof["probe"]["duration"] == "30s"
         assert prof["probe"]["interval"] == "5s"
         assert prof["report"]["outdir"] == "runs"
         assert prof["observability"]["queries"].endswith("queries.yml")
+
+
+APP_VALID = """
+name: app
+kind: app
+cost:
+  scan_paths: [examples/hosted-api-app]
+deployment:
+  rollback_runbook: runbooks/rollback.md
+"""
+
+
+class TestAppProfile:
+    def test_shipped_app_profile_loads(self):
+        prof = load_profile(str(REPO / "profiles" / "app.yml"))
+        assert prof["kind"] == "app"
+        assert prof["cost"]["scan_paths"]
+        assert prof["evals"]["command"]
+
+    def test_valid_app_profile(self, tmp_path):
+        prof = load_profile(write_profile(tmp_path, APP_VALID))
+        assert prof["kind"] == "app"
+        assert prof["observability"] is None
+        assert prof["deployment"]["rollback_runbook"] == "runbooks/rollback.md"
+
+    def test_bad_kind(self, tmp_path):
+        with pytest.raises(ProfileError, match="kind"):
+            load_profile(write_profile(tmp_path, "name: x\nkind: bogus\n"))
+
+    def test_app_requires_a_section(self, tmp_path):
+        with pytest.raises(ProfileError, match="at least one"):
+            load_profile(write_profile(tmp_path, "name: x\nkind: app\n"))
+
+    def test_cost_requires_scan_paths(self, tmp_path):
+        text = "name: x\nkind: app\ncost:\n  calls_per_month: 1000\n"
+        with pytest.raises(ProfileError, match="scan_paths"):
+            load_profile(write_profile(tmp_path, text))
 
 
 class TestInvalidProfile:

@@ -36,6 +36,26 @@ jobs:
           test -f runs/ci/aipreflight-report.json
           aipreflight report runs/ci | head -1
 
+      - name: App profile smoke test (tokentoll cost gate)
+        run: |
+          aipreflight check --profile profiles/app.yml --out runs/app-ci || [ $? -eq 1 ]
+          test -f runs/app-ci/aipreflight-report.json
+          aipreflight report runs/app-ci | head -1
+
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install example deps
+        run: pip install -r examples/hosted-api-app/requirements.txt pytest
+      - name: Run example smoke tests and evals (offline)
+        env:
+          AIPREFLIGHT_FAKE_LLM: "1"
+        run: python -m pytest examples/hosted-api-app -q
+
   shellcheck:
     runs-on: ubuntu-latest
     steps:
