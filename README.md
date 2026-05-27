@@ -8,7 +8,50 @@ aipreflight brings the deployment discipline of CI gates, smoke tests, and SLO-b
 
 > The project's strongest proof is SLA gating for self-hosted inference, and it has broadened into a general production readiness gate for AI applications. It ships three profiles: `inference` (SLA gating), `app` (cost, evals, observability, rollback for hosted-API apps), and `rag` (retrieval and answer quality).
 
+Read the positioning post: [The missing deployment gate for AI applications](https://jonathanwrede.de/en/blog/the-missing-deployment-gate-for-ai-applications/).
+
 ![demo](demo/demo.gif)
+
+## Why this exists
+
+Normal software has CI gates, smoke tests, canaries, and SLOs. Classical ML has model validation and model blessing. Modern AI applications often still ship prompt changes, RAG changes, model/provider changes, and AI features without equivalent preflight checks for quality, cost, latency, observability, and rollback readiness.
+
+`aipreflight` fills that gap at the release boundary:
+
+```text
+Can we ship this AI change?
+
+quality/evals        PASS or FAIL
+RAG behavior         PASS or FAIL
+latency/TTFT         PASS or FAIL
+error rate           PASS or FAIL
+cost budget          PASS or FAIL
+observability        PASS or WARN or FAIL
+rollback/runbook     PASS or WARN or FAIL
+overall verdict      PASS or FAIL
+```
+
+## 60-second demo
+
+Run the no-GPU demo checks:
+
+```bash
+./scripts/demo-quick.sh
+```
+
+Or run the core commands directly:
+
+```bash
+aipreflight doctor
+aipreflight check --profile profiles/app.yml
+aipreflight check --profile profiles/rag.yml
+```
+
+The inference profile uses `llmprobe` against an OpenAI-compatible endpoint:
+
+```bash
+aipreflight check --profile profiles/inference.yml
+```
 
 ## The problem
 
